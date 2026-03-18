@@ -18,7 +18,7 @@ import {
   CreditCard,
   Settings,
   LogOut,
-  Hexagon,
+  Aperture,
 } from 'lucide-react'
 
 export function AppSidebar() {
@@ -37,10 +37,8 @@ export function AppSidebar() {
   return (
     <Sidebar variant="inset" className="border-r border-border/50">
       <SidebarHeader className="border-b border-border/50 py-4 px-4 flex flex-row items-center gap-2">
-        <Hexagon className="h-6 w-6 text-primary fill-primary/20" />
-        <span className="font-bold text-lg tracking-tight truncate">
-          CCTV<span className="text-primary">Net</span>
-        </span>
+        <Aperture className="h-6 w-6 text-primary" />
+        <span className="font-bold text-xl tracking-tight truncate">Viona</span>
       </SidebarHeader>
       <SidebarContent className="py-4">
         <SidebarGroup>
