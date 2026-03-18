@@ -6,9 +6,10 @@ import { AppFooter } from './layout/AppFooter'
 
 export default function Layout() {
   const location = useLocation()
-  const isLandingPage = location.pathname === '/'
+  const publicRoutes = ['/', '/login', '/register']
+  const isPublicPage = publicRoutes.includes(location.pathname)
 
-  if (isLandingPage) {
+  if (isPublicPage) {
     return <Outlet />
   }
 

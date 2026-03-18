@@ -1,7 +1,8 @@
+import { Link, useNavigate } from 'react-router-dom'
 import { mockCameras } from '@/lib/mock-data'
 import { AddCameraDialog } from '@/components/cameras/AddCameraDialog'
 import { Input } from '@/components/ui/input'
-import { Search, Filter, MoreHorizontal, Settings2, Trash2 } from 'lucide-react'
+import { Search, Filter, Settings2, Trash2 } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -12,14 +13,10 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 
 export default function Cameras() {
+  const navigate = useNavigate()
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -57,12 +54,13 @@ export default function Cameras() {
             {mockCameras.map((camera) => (
               <TableRow key={camera.id} className="hover:bg-muted/30">
                 <TableCell>
-                  <div className="h-10 w-16 rounded overflow-hidden bg-muted">
+                  <div className="h-10 w-16 rounded overflow-hidden bg-muted relative">
                     <img
                       src={camera.image}
                       alt={camera.name}
                       className="h-full w-full object-cover"
                     />
+                    {!camera.status && <div className="absolute inset-0 bg-black/50" />}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -77,35 +75,34 @@ export default function Cameras() {
                     className="bg-opacity-10 font-normal"
                   >
                     {camera.status === 'online' ? (
-                      <span className="text-emerald-500">Online</span>
+                      <span className="text-emerald-500 font-semibold">Online</span>
                     ) : (
                       <span>Offline</span>
                     )}
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <div className="flex gap-1 flex-wrap">
-                    <Badge variant="secondary" className="text-xs">
-                      {camera.analytics.length} Módulos
-                    </Badge>
-                  </div>
+                  <Badge variant="secondary" className="text-xs">
+                    {camera.analytics.length} Módulos
+                  </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <Settings2 className="h-4 w-4 mr-2" /> Configurar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive">
-                        <Trash2 className="h-4 w-4 mr-2" /> Remover
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => navigate(`/cameras/${camera.id}/analytics`)}
+                    >
+                      <Settings2 className="h-4 w-4 mr-2" /> Configurar analíticos
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
