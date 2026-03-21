@@ -9,7 +9,263 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      analytics_catalog: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          price_model: string | null
+          slug: string
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          price_model?: string | null
+          slug: string
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          price_model?: string | null
+          slug?: string
+          unit_price?: number
+        }
+        Relationships: []
+      }
+      camera_analytics_config: {
+        Row: {
+          activated_at: string
+          analytic_id: string
+          camera_id: string
+          id: string
+          is_active: boolean | null
+        }
+        Insert: {
+          activated_at?: string
+          analytic_id: string
+          camera_id: string
+          id?: string
+          is_active?: boolean | null
+        }
+        Update: {
+          activated_at?: string
+          analytic_id?: string
+          camera_id?: string
+          id?: string
+          is_active?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'camera_analytics_config_analytic_id_fkey'
+            columns: ['analytic_id']
+            isOneToOne: false
+            referencedRelation: 'analytics_catalog'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'camera_analytics_config_camera_id_fkey'
+            columns: ['camera_id']
+            isOneToOne: false
+            referencedRelation: 'cameras'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      cameras: {
+        Row: {
+          connection_url: string | null
+          created_at: string
+          id: string
+          name: string
+          organization_id: string
+          status: string | null
+        }
+        Insert: {
+          connection_url?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          organization_id: string
+          status?: string | null
+        }
+        Update: {
+          connection_url?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'cameras_organization_id_fkey'
+            columns: ['organization_id']
+            isOneToOne: false
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      events: {
+        Row: {
+          analytic_id: string
+          camera_id: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          thumbnail_url: string | null
+        }
+        Insert: {
+          analytic_id: string
+          camera_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          thumbnail_url?: string | null
+        }
+        Update: {
+          analytic_id?: string
+          camera_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          thumbnail_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'events_analytic_id_fkey'
+            columns: ['analytic_id']
+            isOneToOne: false
+            referencedRelation: 'analytics_catalog'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'events_camera_id_fkey'
+            columns: ['camera_id']
+            isOneToOne: false
+            referencedRelation: 'cameras'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          billing_email: string | null
+          cnpj: string | null
+          created_at: string
+          id: string
+          name: string
+          status: string | null
+          trial_until: string | null
+        }
+        Insert: {
+          billing_email?: string | null
+          cnpj?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          status?: string | null
+          trial_until?: string | null
+        }
+        Update: {
+          billing_email?: string | null
+          cnpj?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          status?: string | null
+          trial_until?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+          organization_id: string | null
+          role: string | null
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id: string
+          organization_id?: string | null
+          role?: string | null
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          organization_id?: string | null
+          role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'profiles_organization_id_fkey'
+            columns: ['organization_id']
+            isOneToOne: false
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      usage_logs: {
+        Row: {
+          amount: number
+          analytic_id: string | null
+          camera_id: string | null
+          id: string
+          organization_id: string
+          timestamp: string
+        }
+        Insert: {
+          amount?: number
+          analytic_id?: string | null
+          camera_id?: string | null
+          id?: string
+          organization_id: string
+          timestamp?: string
+        }
+        Update: {
+          amount?: number
+          analytic_id?: string | null
+          camera_id?: string | null
+          id?: string
+          organization_id?: string
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'usage_logs_analytic_id_fkey'
+            columns: ['analytic_id']
+            isOneToOne: false
+            referencedRelation: 'analytics_catalog'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'usage_logs_camera_id_fkey'
+            columns: ['camera_id']
+            isOneToOne: false
+            referencedRelation: 'cameras'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'usage_logs_organization_id_fkey'
+            columns: ['organization_id']
+            isOneToOne: false
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -153,3 +409,154 @@ export const Constants = {
 // IMPORTANT: The TypeScript types above map UUID, TEXT, VARCHAR all to "string".
 // Use the COLUMN TYPES section below to know the real PostgreSQL type for each column.
 // Always use the correct PostgreSQL type when writing SQL migrations.
+
+// --- COLUMN TYPES (actual PostgreSQL types) ---
+// Use this to know the real database type when writing migrations.
+// "string" in TypeScript types above may be uuid, text, varchar, timestamptz, etc.
+// Table: analytics_catalog
+//   id: uuid (not null, default: gen_random_uuid())
+//   slug: text (not null)
+//   name: text (not null)
+//   description: text (nullable)
+//   price_model: text (nullable)
+//   unit_price: numeric (not null, default: 0)
+//   created_at: timestamp with time zone (not null, default: now())
+// Table: camera_analytics_config
+//   id: uuid (not null, default: gen_random_uuid())
+//   camera_id: uuid (not null)
+//   analytic_id: uuid (not null)
+//   is_active: boolean (nullable, default: true)
+//   activated_at: timestamp with time zone (not null, default: now())
+// Table: cameras
+//   id: uuid (not null, default: gen_random_uuid())
+//   organization_id: uuid (not null)
+//   name: text (not null)
+//   connection_url: text (nullable)
+//   status: text (nullable, default: 'offline'::text)
+//   created_at: timestamp with time zone (not null, default: now())
+// Table: events
+//   id: uuid (not null, default: gen_random_uuid())
+//   camera_id: uuid (not null)
+//   analytic_id: uuid (not null)
+//   metadata: jsonb (nullable, default: '{}'::jsonb)
+//   thumbnail_url: text (nullable)
+//   created_at: timestamp with time zone (not null, default: now())
+// Table: organizations
+//   id: uuid (not null, default: gen_random_uuid())
+//   name: text (not null)
+//   cnpj: text (nullable)
+//   billing_email: text (nullable)
+//   status: text (nullable, default: 'trial'::text)
+//   trial_until: timestamp with time zone (nullable)
+//   created_at: timestamp with time zone (not null, default: now())
+// Table: profiles
+//   id: uuid (not null)
+//   organization_id: uuid (nullable)
+//   full_name: text (nullable)
+//   role: text (nullable, default: 'viewer'::text)
+//   created_at: timestamp with time zone (not null, default: now())
+// Table: usage_logs
+//   id: uuid (not null, default: gen_random_uuid())
+//   organization_id: uuid (not null)
+//   camera_id: uuid (nullable)
+//   analytic_id: uuid (nullable)
+//   amount: numeric (not null, default: 0)
+//   timestamp: timestamp with time zone (not null, default: now())
+
+// --- CONSTRAINTS ---
+// Table: analytics_catalog
+//   PRIMARY KEY analytics_catalog_pkey: PRIMARY KEY (id)
+//   CHECK analytics_catalog_price_model_check: CHECK ((price_model = ANY (ARRAY['per_event'::text, 'monthly'::text])))
+//   UNIQUE analytics_catalog_slug_key: UNIQUE (slug)
+// Table: camera_analytics_config
+//   FOREIGN KEY camera_analytics_config_analytic_id_fkey: FOREIGN KEY (analytic_id) REFERENCES analytics_catalog(id) ON DELETE CASCADE
+//   UNIQUE camera_analytics_config_camera_id_analytic_id_key: UNIQUE (camera_id, analytic_id)
+//   FOREIGN KEY camera_analytics_config_camera_id_fkey: FOREIGN KEY (camera_id) REFERENCES cameras(id) ON DELETE CASCADE
+//   PRIMARY KEY camera_analytics_config_pkey: PRIMARY KEY (id)
+// Table: cameras
+//   FOREIGN KEY cameras_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+//   PRIMARY KEY cameras_pkey: PRIMARY KEY (id)
+//   CHECK cameras_status_check: CHECK ((status = ANY (ARRAY['online'::text, 'offline'::text])))
+// Table: events
+//   FOREIGN KEY events_analytic_id_fkey: FOREIGN KEY (analytic_id) REFERENCES analytics_catalog(id) ON DELETE CASCADE
+//   FOREIGN KEY events_camera_id_fkey: FOREIGN KEY (camera_id) REFERENCES cameras(id) ON DELETE CASCADE
+//   PRIMARY KEY events_pkey: PRIMARY KEY (id)
+// Table: organizations
+//   UNIQUE organizations_cnpj_key: UNIQUE (cnpj)
+//   PRIMARY KEY organizations_pkey: PRIMARY KEY (id)
+//   CHECK organizations_status_check: CHECK ((status = ANY (ARRAY['active'::text, 'trial'::text, 'past_due'::text, 'canceled'::text])))
+// Table: profiles
+//   FOREIGN KEY profiles_id_fkey: FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
+//   FOREIGN KEY profiles_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+//   PRIMARY KEY profiles_pkey: PRIMARY KEY (id)
+//   CHECK profiles_role_check: CHECK ((role = ANY (ARRAY['admin'::text, 'operator'::text, 'viewer'::text])))
+// Table: usage_logs
+//   FOREIGN KEY usage_logs_analytic_id_fkey: FOREIGN KEY (analytic_id) REFERENCES analytics_catalog(id) ON DELETE SET NULL
+//   FOREIGN KEY usage_logs_camera_id_fkey: FOREIGN KEY (camera_id) REFERENCES cameras(id) ON DELETE SET NULL
+//   FOREIGN KEY usage_logs_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+//   PRIMARY KEY usage_logs_pkey: PRIMARY KEY (id)
+
+// --- ROW LEVEL SECURITY POLICIES ---
+// Table: analytics_catalog
+//   Policy "Analytics Catalog SELECT" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: true
+// Table: camera_analytics_config
+//   Policy "CameraAnalyticsConfig DELETE" (DELETE, PERMISSIVE) roles={public}
+//     USING: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id IN ( SELECT profiles.organization_id            FROM profiles           WHERE (profiles.id = auth.uid())))))
+//   Policy "CameraAnalyticsConfig INSERT" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id IN ( SELECT profiles.organization_id            FROM profiles           WHERE (profiles.id = auth.uid())))))
+//   Policy "CameraAnalyticsConfig SELECT" (SELECT, PERMISSIVE) roles={public}
+//     USING: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id IN ( SELECT profiles.organization_id            FROM profiles           WHERE (profiles.id = auth.uid())))))
+//   Policy "CameraAnalyticsConfig UPDATE" (UPDATE, PERMISSIVE) roles={public}
+//     USING: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id IN ( SELECT profiles.organization_id            FROM profiles           WHERE (profiles.id = auth.uid())))))
+// Table: cameras
+//   Policy "Cameras DELETE" (DELETE, PERMISSIVE) roles={public}
+//     USING: (organization_id IN ( SELECT profiles.organization_id    FROM profiles   WHERE (profiles.id = auth.uid())))
+//   Policy "Cameras INSERT" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: (organization_id IN ( SELECT profiles.organization_id    FROM profiles   WHERE (profiles.id = auth.uid())))
+//   Policy "Cameras SELECT" (SELECT, PERMISSIVE) roles={public}
+//     USING: (organization_id IN ( SELECT profiles.organization_id    FROM profiles   WHERE (profiles.id = auth.uid())))
+//   Policy "Cameras UPDATE" (UPDATE, PERMISSIVE) roles={public}
+//     USING: (organization_id IN ( SELECT profiles.organization_id    FROM profiles   WHERE (profiles.id = auth.uid())))
+// Table: events
+//   Policy "Events DELETE" (DELETE, PERMISSIVE) roles={public}
+//     USING: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id IN ( SELECT profiles.organization_id            FROM profiles           WHERE (profiles.id = auth.uid())))))
+//   Policy "Events INSERT" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id IN ( SELECT profiles.organization_id            FROM profiles           WHERE (profiles.id = auth.uid())))))
+//   Policy "Events SELECT" (SELECT, PERMISSIVE) roles={public}
+//     USING: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id IN ( SELECT profiles.organization_id            FROM profiles           WHERE (profiles.id = auth.uid())))))
+//   Policy "Events UPDATE" (UPDATE, PERMISSIVE) roles={public}
+//     USING: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id IN ( SELECT profiles.organization_id            FROM profiles           WHERE (profiles.id = auth.uid())))))
+// Table: organizations
+//   Policy "Organizations INSERT" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: true
+//   Policy "Organizations SELECT" (SELECT, PERMISSIVE) roles={public}
+//     USING: (id IN ( SELECT profiles.organization_id    FROM profiles   WHERE (profiles.id = auth.uid())))
+//   Policy "Organizations UPDATE" (UPDATE, PERMISSIVE) roles={public}
+//     USING: (id IN ( SELECT profiles.organization_id    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+// Table: profiles
+//   Policy "Profiles DELETE" (DELETE, PERMISSIVE) roles={public}
+//     USING: (organization_id IN ( SELECT profiles_1.organization_id    FROM profiles profiles_1   WHERE ((profiles_1.id = auth.uid()) AND (profiles_1.role = 'admin'::text))))
+//   Policy "Profiles INSERT" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: ((id = auth.uid()) OR (organization_id IN ( SELECT profiles_1.organization_id    FROM profiles profiles_1   WHERE ((profiles_1.id = auth.uid()) AND (profiles_1.role = 'admin'::text)))))
+//   Policy "Profiles SELECT" (SELECT, PERMISSIVE) roles={public}
+//     USING: ((organization_id IN ( SELECT profiles_1.organization_id    FROM profiles profiles_1   WHERE (profiles_1.id = auth.uid()))) OR (id = auth.uid()))
+//   Policy "Profiles UPDATE" (UPDATE, PERMISSIVE) roles={public}
+//     USING: ((id = auth.uid()) OR (organization_id IN ( SELECT profiles_1.organization_id    FROM profiles profiles_1   WHERE ((profiles_1.id = auth.uid()) AND (profiles_1.role = 'admin'::text)))))
+// Table: usage_logs
+//   Policy "UsageLogs DELETE" (DELETE, PERMISSIVE) roles={public}
+//     USING: (organization_id IN ( SELECT profiles.organization_id    FROM profiles   WHERE (profiles.id = auth.uid())))
+//   Policy "UsageLogs INSERT" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: (organization_id IN ( SELECT profiles.organization_id    FROM profiles   WHERE (profiles.id = auth.uid())))
+//   Policy "UsageLogs SELECT" (SELECT, PERMISSIVE) roles={public}
+//     USING: (organization_id IN ( SELECT profiles.organization_id    FROM profiles   WHERE (profiles.id = auth.uid())))
+//   Policy "UsageLogs UPDATE" (UPDATE, PERMISSIVE) roles={public}
+//     USING: (organization_id IN ( SELECT profiles.organization_id    FROM profiles   WHERE (profiles.id = auth.uid())))
+
+// --- INDEXES ---
+// Table: analytics_catalog
+//   CREATE UNIQUE INDEX analytics_catalog_slug_key ON public.analytics_catalog USING btree (slug)
+// Table: camera_analytics_config
+//   CREATE UNIQUE INDEX camera_analytics_config_camera_id_analytic_id_key ON public.camera_analytics_config USING btree (camera_id, analytic_id)
+// Table: organizations
+//   CREATE UNIQUE INDEX organizations_cnpj_key ON public.organizations USING btree (cnpj)

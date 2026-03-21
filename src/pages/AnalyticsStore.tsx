@@ -1,9 +1,20 @@
-import { mockAnalytics } from '@/lib/mock-data'
+import { useEffect, useState } from 'react'
 import { AnalyticCard } from '@/components/store/AnalyticCard'
 import { Input } from '@/components/ui/input'
 import { Search } from 'lucide-react'
+import { supabase } from '@/lib/supabase/client'
 
 export default function AnalyticsStore() {
+  const [catalog, setCatalog] = useState<any[]>([])
+
+  useEffect(() => {
+    supabase
+      .from('analytics_catalog')
+      .select('*')
+      .order('name')
+      .then(({ data }) => setCatalog(data || []))
+  }, [])
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-2">
@@ -23,7 +34,7 @@ export default function AnalyticsStore() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {mockAnalytics.map((analytic) => (
+        {catalog.map((analytic) => (
           <AnalyticCard key={analytic.id} analytic={analytic} />
         ))}
       </div>

@@ -1,11 +1,38 @@
-import { mockEvents } from '@/lib/mock-data'
+import { useEffect, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Search, Calendar, Filter, Download } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { useProfile } from '@/hooks/use-profile'
+import { supabase } from '@/lib/supabase/client'
 
 export default function Events() {
+  const { profile } = useProfile()
+  const [events, setEvents] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!profile) return
+    supabase
+      .from('events')
+      .select('*, cameras(name), analytics_catalog(name, slug)')
+      .order('created_at', { ascending: false })
+      .limit(50)
+      .then(({ data }) => {
+        setEvents(data || [])
+        setLoading(false)
+      })
+  }, [profile])
+
+  const formatTime = (iso: string) => {
+    return new Date(iso).toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
+  }
+
   return (
     <div className="flex flex-col gap-6 h-[calc(100vh-8rem)]">
       <div className="flex justify-between items-center shrink-0">
@@ -37,71 +64,50 @@ export default function Events() {
       </div>
 
       <div className="flex-1 overflow-y-auto pr-2 pb-4 scrollbar-thin">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {mockEvents.map((event, i) => (
-            <Card
-              key={event.id}
-              className="overflow-hidden border-border/50 bg-card/50 hover:border-primary/30 transition-colors animate-slide-up"
-              style={{ animationDelay: `${i * 50}ms` }}
-            >
-              <div className="relative aspect-video bg-black">
-                {event.image ? (
-                  <img
-                    src={event.image}
-                    alt={event.type}
-                    className="w-full h-full object-cover opacity-90"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                    Sem imagem
+        {loading ? (
+          <div className="text-center py-10 text-muted-foreground">Carregando eventos...</div>
+        ) : events.length === 0 ? (
+          <div className="text-center py-10 text-muted-foreground">
+            Nenhum evento registrado ainda.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {events.map((event, i) => (
+              <Card
+                key={event.id}
+                className="overflow-hidden border-border/50 bg-card/50 hover:border-primary/30 transition-colors animate-slide-up"
+                style={{ animationDelay: `${(i % 10) * 50}ms` }}
+              >
+                <div className="relative aspect-video bg-black">
+                  {event.thumbnail_url ? (
+                    <img
+                      src={event.thumbnail_url}
+                      alt="Thumbnail"
+                      className="w-full h-full object-cover opacity-90"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+                      Sem imagem
+                    </div>
+                  )}
+                  <div className="absolute top-2 left-2">
+                    <Badge variant="secondary" className="bg-black/60 backdrop-blur border-none">
+                      {formatTime(event.created_at)}
+                    </Badge>
                   </div>
-                )}
-                <div className="absolute top-2 left-2">
-                  <Badge
-                    variant={event.severity === 'critical' ? 'destructive' : 'secondary'}
-                    className="bg-black/60 backdrop-blur border-none"
-                  >
-                    {event.time}
-                  </Badge>
                 </div>
-              </div>
-              <CardContent className="p-4">
-                <h3 className="font-semibold truncate">{event.type}</h3>
-                <p className="text-sm text-muted-foreground truncate">{event.camera}</p>
-                <div className="mt-3 flex gap-2">
-                  <Button size="sm" variant="secondary" className="w-full text-xs h-8">
-                    Ver Detalhes
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-          {/* Duplicate events to fill grid for demo */}
-          {mockEvents.map((event, i) => (
-            <Card
-              key={`${event.id}-dup`}
-              className="overflow-hidden border-border/50 bg-card/50 hover:border-primary/30 transition-colors animate-slide-up"
-              style={{ animationDelay: `${(i + 5) * 50}ms` }}
-            >
-              <div className="relative aspect-video bg-black">
-                <img
-                  src={event.image}
-                  alt={event.type}
-                  className="w-full h-full object-cover opacity-90"
-                />
-                <div className="absolute top-2 left-2">
-                  <Badge variant="secondary" className="bg-black/60">
-                    {event.time}
-                  </Badge>
-                </div>
-              </div>
-              <CardContent className="p-4">
-                <h3 className="font-semibold truncate">{event.type}</h3>
-                <p className="text-sm text-muted-foreground truncate">{event.camera}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                <CardContent className="p-4">
+                  <h3 className="font-semibold truncate">
+                    {event.analytics_catalog?.name || 'Analítico Desconhecido'}
+                  </h3>
+                  <p className="text-sm text-muted-foreground truncate">
+                    {event.cameras?.name || 'Câmera Desconhecida'}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

@@ -1,6 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { mockCameras, mockAnalytics } from '@/lib/mock-data'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import {
@@ -11,36 +10,71 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, PlayCircle, StopCircle, Info } from 'lucide-react'
+import { supabase } from '@/lib/supabase/client'
+import { getAnalyticUI } from '@/lib/constants'
+import { toast } from 'sonner'
 
 export default function CameraAnalytics() {
-  const { id } = useParams()
-  const camera = mockCameras.find((c) => c.id === id) || mockCameras[0] // fallback for demo
+  const { id: cameraId } = useParams()
+  const [camera, setCamera] = useState<any>(null)
+  const [catalog, setCatalog] = useState<any[]>([])
+  const [activeIds, setActiveIds] = useState<string[]>([])
 
-  const [activeIds, setActiveIds] = useState<string[]>(camera.analytics)
   const [dialogState, setDialogState] = useState<{
     isOpen: boolean
     type: 'activate' | 'deactivate'
     analytic: any | null
   }>({ isOpen: false, type: 'activate', analytic: null })
 
+  useEffect(() => {
+    if (!cameraId) return
+    const load = async () => {
+      const [{ data: cam }, { data: cat }, { data: config }] = await Promise.all([
+        supabase.from('cameras').select('*').eq('id', cameraId).single(),
+        supabase.from('analytics_catalog').select('*').order('name'),
+        supabase.from('camera_analytics_config').select('analytic_id').eq('camera_id', cameraId),
+      ])
+      setCamera(cam)
+      setCatalog(cat || [])
+      setActiveIds((config || []).map((c) => c.analytic_id))
+    }
+    load()
+  }, [cameraId])
+
   const handleToggle = (analytic: any) => {
     const isActive = activeIds.includes(analytic.id)
     setDialogState({ isOpen: true, type: isActive ? 'deactivate' : 'activate', analytic })
   }
 
-  const confirmToggle = () => {
+  const confirmToggle = async () => {
     const { type, analytic } = dialogState
-    if (!analytic) return
+    if (!analytic || !cameraId) return
 
-    if (type === 'activate') {
-      setActiveIds((prev) => [...prev, analytic.id])
-    } else {
-      setActiveIds((prev) => prev.filter((aId) => aId !== analytic.id))
+    try {
+      if (type === 'activate') {
+        await supabase
+          .from('camera_analytics_config')
+          .insert({ camera_id: cameraId, analytic_id: analytic.id })
+        setActiveIds((prev) => [...prev, analytic.id])
+        toast.success(`${analytic.name} ativado com sucesso!`)
+      } else {
+        await supabase
+          .from('camera_analytics_config')
+          .delete()
+          .match({ camera_id: cameraId, analytic_id: analytic.id })
+        setActiveIds((prev) => prev.filter((aId) => aId !== analytic.id))
+        toast.success(`${analytic.name} desativado.`)
+      }
+    } catch (err: any) {
+      toast.error('Erro ao atualizar configuração', { description: err.message })
+    } finally {
+      setDialogState({ isOpen: false, type: 'activate', analytic: null })
     }
-    setDialogState({ isOpen: false, type: 'activate', analytic: null })
   }
+
+  if (!camera)
+    return <div className="p-8 text-center text-muted-foreground">Carregando câmera...</div>
 
   return (
     <div className="flex flex-col gap-6">
@@ -59,9 +93,9 @@ export default function CameraAnalytics() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {mockAnalytics.map((analytic) => {
+        {catalog.map((analytic) => {
           const isActive = activeIds.includes(analytic.id)
-          const Icon = analytic.icon
+          const { icon: Icon, color } = getAnalyticUI(analytic.slug)
 
           return (
             <Card
@@ -84,13 +118,15 @@ export default function CameraAnalytics() {
                 </div>
 
                 <h3 className="font-semibold mb-1 text-base">{analytic.name}</h3>
-                <p className="text-xs text-muted-foreground mb-4">{analytic.desc}</p>
+                <p className="text-xs text-muted-foreground mb-4">{analytic.description}</p>
 
                 <div className="mt-auto flex items-end gap-2">
                   <span className="font-mono font-medium text-lg">
-                    R$ {analytic.price.toFixed(2).replace('.', ',')}
+                    R$ {Number(analytic.unit_price).toFixed(2).replace('.', ',')}
                   </span>
-                  <span className="text-[10px] text-muted-foreground pb-1">{analytic.unit}</span>
+                  <span className="text-[10px] text-muted-foreground pb-1">
+                    {analytic.price_model === 'monthly' ? '/mês' : 'por evento'}
+                  </span>
                 </div>
               </CardContent>
               <CardFooter className="px-5 pb-5 pt-0">
@@ -136,8 +172,10 @@ export default function CameraAnalytics() {
                 <div className="p-4 rounded-lg bg-muted/30 border border-border/50 flex flex-col gap-1">
                   <span className="text-xs text-muted-foreground">Modelo de Cobrança</span>
                   <span className="font-semibold text-lg">
-                    R$ {dialogState.analytic?.price.toFixed(2).replace('.', ',')}{' '}
-                    {dialogState.analytic?.unit}
+                    R$ {Number(dialogState.analytic?.unit_price).toFixed(2).replace('.', ',')}{' '}
+                    {dialogState.analytic?.price_model === 'monthly'
+                      ? 'fixo por mês'
+                      : 'por evento'}
                   </span>
                 </div>
               </div>
@@ -145,8 +183,8 @@ export default function CameraAnalytics() {
               <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 flex gap-3">
                 <Info className="h-5 w-5 text-destructive shrink-0" />
                 <p className="text-sm text-destructive-foreground">
-                  A cobrança será interrompida imediatamente. Você só pagará pelo uso acumulado até
-                  este momento no mês atual.
+                  A cobrança será interrompida imediatamente. Você pagará apenas pelo uso acumulado
+                  até este momento.
                 </p>
               </div>
             )}

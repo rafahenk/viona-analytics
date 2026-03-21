@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -6,7 +7,7 @@ import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts'
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'
-import { CreditCard, AlertTriangle, Zap, Download } from 'lucide-react'
+import { AlertTriangle, Zap } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -15,7 +16,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { useProfile } from '@/hooks/use-profile'
+import { supabase } from '@/lib/supabase/client'
 
+// Static chart data since simulating daily breakdown is complex for a demo
 const chartData = [
   { day: '01', lpr: 1.2, mov: 0.5, intr: 0 },
   { day: '02', lpr: 1.5, mov: 0.6, intr: 0 },
@@ -27,6 +31,43 @@ const chartData = [
 ]
 
 export default function Billing() {
+  const { profile } = useProfile()
+  const [totalCost, setTotalCost] = useState(0)
+  const [cameraTotals, setCameraTotals] = useState<Record<string, number>>({})
+  const [analyticTotals, setAnalyticTotals] = useState<Record<string, number>>({})
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!profile) return
+    const fetchUsage = async () => {
+      const { data } = await supabase
+        .from('usage_logs')
+        .select('amount, cameras(name), analytics_catalog(name)')
+
+      const usage = data || []
+
+      const t = usage.reduce((sum, item) => sum + Number(item.amount), 0)
+
+      const cTotals = usage.reduce((acc: any, curr) => {
+        const name = curr.cameras?.name || 'Desconhecida'
+        acc[name] = (acc[name] || 0) + Number(curr.amount)
+        return acc
+      }, {})
+
+      const aTotals = usage.reduce((acc: any, curr) => {
+        const name = curr.analytics_catalog?.name || 'Desconhecido'
+        acc[name] = (acc[name] || 0) + Number(curr.amount)
+        return acc
+      }, {})
+
+      setTotalCost(t)
+      setCameraTotals(cTotals)
+      setAnalyticTotals(aTotals)
+      setLoading(false)
+    }
+    fetchUsage()
+  }, [profile])
+
   return (
     <div className="max-w-6xl mx-auto flex flex-col gap-8">
       <div>
@@ -37,7 +78,6 @@ export default function Billing() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Estimated Invoice */}
         <Card className="border-primary/30 bg-card shadow-[0_0_20px_-5px_rgba(59,130,246,0.1)] relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
             <Zap className="h-32 w-32" />
@@ -48,7 +88,9 @@ export default function Billing() {
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline gap-1 mt-2">
-              <span className="text-4xl font-extrabold text-primary">R$ 124,50</span>
+              <span className="text-4xl font-extrabold text-primary">
+                {loading ? '...' : `R$ ${totalCost.toFixed(2).replace('.', ',')}`}
+              </span>
             </div>
             <div className="mt-4 flex gap-2">
               <Button className="w-full">Pagar Antecipado</Button>
@@ -56,10 +98,9 @@ export default function Billing() {
           </CardContent>
         </Card>
 
-        {/* Usage Chart */}
         <Card className="md:col-span-2 border-border/50 bg-card/50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Evolução do Consumo</CardTitle>
+            <CardTitle className="text-lg">Evolução do Consumo (Demonstração)</CardTitle>
           </CardHeader>
           <CardContent>
             <ChartContainer
@@ -94,7 +135,6 @@ export default function Billing() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Breakdown by Camera */}
         <Card className="border-border/50 bg-card/50">
           <CardHeader>
             <CardTitle className="text-lg">Consumo por Câmera</CardTitle>
@@ -104,28 +144,31 @@ export default function Billing() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Câmera</TableHead>
-                  <TableHead className="text-right">Custo Estimado</TableHead>
+                  <TableHead className="text-right">Custo Acumulado</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <TableRow>
-                  <TableCell className="font-medium">Estacionamento G1</TableCell>
-                  <TableCell className="text-right">R$ 54,20</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="font-medium">Portão Principal</TableCell>
-                  <TableCell className="text-right">R$ 42,10</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="font-medium">Recepção Leste</TableCell>
-                  <TableCell className="text-right">R$ 28,20</TableCell>
-                </TableRow>
+                {Object.entries(cameraTotals).length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-center text-muted-foreground">
+                      Sem consumo
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  Object.entries(cameraTotals).map(([name, cost]) => (
+                    <TableRow key={name}>
+                      <TableCell className="font-medium">{name}</TableCell>
+                      <TableCell className="text-right">
+                        R$ {cost.toFixed(2).replace('.', ',')}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
 
-        {/* Breakdown by Analytic */}
         <Card className="border-border/50 bg-card/50">
           <CardHeader>
             <CardTitle className="text-lg">Consumo por Analítico</CardTitle>
@@ -135,29 +178,32 @@ export default function Billing() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Módulo</TableHead>
-                  <TableHead className="text-right">Custo Estimado</TableHead>
+                  <TableHead className="text-right">Custo Acumulado</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <TableRow>
-                  <TableCell className="font-medium">LPR (Placas)</TableCell>
-                  <TableCell className="text-right">R$ 82,40</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="font-medium">Heatmap (Mensal)</TableCell>
-                  <TableCell className="text-right">R$ 20,00</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="font-medium">Movimento Inteligente</TableCell>
-                  <TableCell className="text-right">R$ 22,10</TableCell>
-                </TableRow>
+                {Object.entries(analyticTotals).length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-center text-muted-foreground">
+                      Sem consumo
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  Object.entries(analyticTotals).map(([name, cost]) => (
+                    <TableRow key={name}>
+                      <TableCell className="font-medium">{name}</TableCell>
+                      <TableCell className="text-right">
+                        R$ {cost.toFixed(2).replace('.', ',')}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
       </div>
 
-      {/* Alert Configuration */}
       <Card className="border-border/50 bg-card/50">
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -201,7 +247,8 @@ export default function Billing() {
                   htmlFor="email"
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
-                  Email (admin@empresa.com.br)
+                  Email (
+                  {profile?.billing_email || profile?.organizations?.billing_email || 'cadastrado'})
                 </label>
               </div>
               <div className="flex items-center space-x-2">
