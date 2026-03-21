@@ -22,7 +22,7 @@ export default function Login() {
       const { error } = await signIn(email, password)
       if (error) {
         toast.error('Erro nas credenciais', {
-          description: 'Usuário não encontrado ou senha incorreta.',
+          description: 'E-mail não cadastrado ou senha incorreta.',
         })
         setLoading(false)
         return
@@ -30,8 +30,8 @@ export default function Login() {
 
       navigate('/dashboard')
     } catch (error: any) {
-      toast.error('Erro nas credenciais', {
-        description: 'Usuário não encontrado ou senha incorreta.',
+      toast.error('Erro de Autenticação', {
+        description: 'Ocorreu um erro inesperado ao tentar logar. Tente novamente.',
       })
     } finally {
       setLoading(false)

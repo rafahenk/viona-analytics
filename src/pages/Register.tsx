@@ -12,7 +12,7 @@ import { supabase } from '@/lib/supabase/client'
 
 export default function Register() {
   const navigate = useNavigate()
-  const { signUp } = useAuth()
+  const { signUp, signOut } = useAuth()
   const [loading, setLoading] = useState(false)
 
   const [form, setForm] = useState({
@@ -32,6 +32,8 @@ export default function Register() {
     }
 
     setLoading(true)
+    let createdUserId: string | null = null
+
     try {
       const { data: authData, error: authError } = await signUp(form.email, form.password, {
         data: { name: form.name },
@@ -59,6 +61,8 @@ export default function Register() {
       }
 
       if (!authData?.user) throw new Error('Não foi possível criar o usuário.')
+
+      createdUserId = authData.user.id
 
       // Generate IDs client-side to avoid SELECT returning 0 rows immediately after INSERT due to RLS
       const newOrgId = crypto.randomUUID()
@@ -121,8 +125,19 @@ export default function Register() {
       })
       navigate('/dashboard')
     } catch (error: any) {
+      // Abort session if database setup fails to prevent zombie accounts logged in
+      if (createdUserId) {
+        await signOut()
+      }
+
+      let errorMsg = error.message || 'Ocorreu um erro inesperado. Tente novamente mais tarde.'
+
+      if (error.code === '23505' && error.message.includes('organizations_cnpj_key')) {
+        errorMsg = 'Este CNPJ já está cadastrado em nosso sistema.'
+      }
+
       toast.error('Erro ao criar conta', {
-        description: error.message || 'Ocorreu um erro inesperado. Tente novamente mais tarde.',
+        description: errorMsg,
       })
     } finally {
       setLoading(false)

@@ -1,4 +1,4 @@
-import { Bell, Search } from 'lucide-react'
+import { Bell, Search, LogOut, User } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -21,21 +21,25 @@ export function AppHeader() {
   const navigate = useNavigate()
 
   const handleLogout = async () => {
-    await signOut()
-    navigate('/')
+    try {
+      await signOut()
+    } finally {
+      navigate('/')
+    }
   }
 
   // Get initials for fallback
   const getInitials = (name: string) => {
+    if (!name) return 'US'
     return name
-      ? name
-          .split(' ')
-          .map((n) => n[0])
-          .join('')
-          .substring(0, 2)
-          .toUpperCase()
-      : 'AD'
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .substring(0, 2)
+      .toUpperCase()
   }
+
+  const displayName = profile?.full_name || user?.user_metadata?.name || 'Usuário'
 
   return (
     <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-4 border-b bg-background px-6 shadow-sm">
@@ -68,34 +72,34 @@ export function AppHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full border border-border">
               <Avatar className="h-8 w-8">
-                <AvatarImage src="" alt={profile?.full_name || 'Usuário'} />
-                <AvatarFallback>{getInitials(profile?.full_name || '')}</AvatarFallback>
+                <AvatarImage src="" alt={displayName} />
+                <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">
-                  {profile?.full_name || 'Usuário'}
-                </p>
+                <p className="text-sm font-medium leading-none">{displayName}</p>
                 <p className="text-xs leading-none text-muted-foreground truncate">
-                  {user?.email || 'admin@empresa.com.br'}
+                  {user?.email || 'Sem e-mail vinculado'}
                 </p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link to="/profile" className="w-full cursor-pointer">
-                Perfil
+              <Link to="/profile" className="w-full cursor-pointer flex items-center">
+                <User className="mr-2 h-4 w-4" />
+                <span>Meu Perfil</span>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={handleLogout}
-              className="text-destructive focus:text-destructive cursor-pointer"
+              className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer"
             >
-              Sair
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Sair com segurança</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

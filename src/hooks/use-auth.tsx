@@ -25,19 +25,76 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let mounted = true
+
+    const initializeAuth = async () => {
+      try {
+        // 1. Get the session from local storage
+        const {
+          data: { session: currentSession },
+        } = await supabase.auth.getSession()
+
+        if (!currentSession) {
+          if (mounted) {
+            setSession(null)
+            setUser(null)
+            setLoading(false)
+          }
+          return
+        }
+
+        // 2. Validate the session with the server to ensure the user still exists.
+        // This prevents "ghost" sessions where the user was deleted from the DB but the JWT is still in local storage.
+        const {
+          data: { user: currentUser },
+          error,
+        } = await supabase.auth.getUser()
+
+        if (error || !currentUser) {
+          await supabase.auth.signOut()
+          if (mounted) {
+            setSession(null)
+            setUser(null)
+          }
+        } else {
+          if (mounted) {
+            setSession(currentSession)
+            setUser(currentUser)
+          }
+        }
+      } catch (err) {
+        console.error('Error verifying auth session:', err)
+        if (mounted) {
+          setSession(null)
+          setUser(null)
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    initializeAuth()
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
+      if (mounted) {
+        if (event === 'SIGNED_OUT') {
+          setSession(null)
+          setUser(null)
+        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          setSession(session)
+          setUser(session?.user ?? null)
+        }
+      }
     })
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
-    return () => subscription.unsubscribe()
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   const signUp = async (email: string, password: string, options?: any) => {
