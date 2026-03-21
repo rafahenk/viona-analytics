@@ -83,6 +83,42 @@ export type Database = {
           },
         ]
       }
+      camera_access: {
+        Row: {
+          camera_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          camera_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          camera_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'camera_access_camera_id_fkey'
+            columns: ['camera_id']
+            isOneToOne: false
+            referencedRelation: 'cameras'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'camera_access_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       camera_analytics_config: {
         Row: {
           activated_at: string
@@ -536,6 +572,11 @@ export const Constants = {
 //   entity_id: uuid (nullable)
 //   details: jsonb (nullable, default: '{}'::jsonb)
 //   created_at: timestamp with time zone (not null, default: now())
+// Table: camera_access
+//   id: uuid (not null, default: gen_random_uuid())
+//   user_id: uuid (not null)
+//   camera_id: uuid (not null)
+//   created_at: timestamp with time zone (not null, default: now())
 // Table: camera_analytics_config
 //   id: uuid (not null, default: gen_random_uuid())
 //   camera_id: uuid (not null)
@@ -601,6 +642,11 @@ export const Constants = {
 // Table: audit_logs
 //   PRIMARY KEY audit_logs_pkey: PRIMARY KEY (id)
 //   FOREIGN KEY audit_logs_user_id_fkey: FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE SET NULL
+// Table: camera_access
+//   FOREIGN KEY camera_access_camera_id_fkey: FOREIGN KEY (camera_id) REFERENCES cameras(id) ON DELETE CASCADE
+//   PRIMARY KEY camera_access_pkey: PRIMARY KEY (id)
+//   UNIQUE camera_access_user_id_camera_id_key: UNIQUE (user_id, camera_id)
+//   FOREIGN KEY camera_access_user_id_fkey: FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
 // Table: camera_analytics_config
 //   FOREIGN KEY camera_analytics_config_analytic_id_fkey: FOREIGN KEY (analytic_id) REFERENCES analytics_catalog(id) ON DELETE CASCADE
 //   UNIQUE camera_analytics_config_camera_id_analytic_id_key: UNIQUE (camera_id, analytic_id)
@@ -641,6 +687,13 @@ export const Constants = {
 //     WITH CHECK: (auth.uid() IS NOT NULL)
 //   Policy "AuditLogs SELECT Admin" (SELECT, PERMISSIVE) roles={public}
 //     USING: is_super_admin()
+// Table: camera_access
+//   Policy "Camera Access DELETE" (DELETE, PERMISSIVE) roles={public}
+//     USING: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id = get_auth_user_organization_id())))
+//   Policy "Camera Access INSERT" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id = get_auth_user_organization_id())))
+//   Policy "Camera Access SELECT" (SELECT, PERMISSIVE) roles={public}
+//     USING: ((user_id = auth.uid()) OR (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id = get_auth_user_organization_id()))))
 // Table: camera_analytics_config
 //   Policy "CameraAnalyticsConfig DELETE" (DELETE, PERMISSIVE) roles={public}
 //     USING: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id = get_auth_user_organization_id())))
@@ -734,6 +787,8 @@ export const Constants = {
 // --- INDEXES ---
 // Table: analytics_catalog
 //   CREATE UNIQUE INDEX analytics_catalog_slug_key ON public.analytics_catalog USING btree (slug)
+// Table: camera_access
+//   CREATE UNIQUE INDEX camera_access_user_id_camera_id_key ON public.camera_access USING btree (user_id, camera_id)
 // Table: camera_analytics_config
 //   CREATE UNIQUE INDEX camera_analytics_config_camera_id_analytic_id_key ON public.camera_analytics_config USING btree (camera_id, analytic_id)
 // Table: organizations

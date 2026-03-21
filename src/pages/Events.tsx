@@ -14,31 +14,62 @@ export default function Events() {
   const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
+    let isMounted = true
+
     if (profileLoading) return
 
     if (!profile?.organization_id) {
-      setLoadingEvents(false)
+      if (isMounted) setLoadingEvents(false)
       return
     }
 
-    setLoadingEvents(true)
-    supabase
-      .from('events')
-      .select('*, cameras(name), analytics_catalog(name, slug)')
-      .order('created_at', { ascending: false })
-      .limit(50)
-      .then(({ data }) => {
-        setEvents(data || [])
-        setLoadingEvents(false)
-      })
+    const fetchEvents = async () => {
+      try {
+        if (isMounted) setLoadingEvents(true)
+
+        const { data, error } = await supabase
+          .from('events')
+          .select('*, cameras(name), analytics_catalog(name, slug)')
+          .order('created_at', { ascending: false })
+          .limit(50)
+
+        if (error) {
+          console.error('Erro ao carregar eventos:', error.message)
+          if (isMounted) setEvents([])
+          return
+        }
+
+        if (isMounted) {
+          setEvents(data || [])
+        }
+      } catch (err) {
+        console.error('Erro inesperado na requisição de eventos:', err)
+        if (isMounted) setEvents([])
+      } finally {
+        if (isMounted) {
+          setLoadingEvents(false)
+        }
+      }
+    }
+
+    fetchEvents()
+
+    return () => {
+      isMounted = false
+    }
   }, [profile, profileLoading])
 
   const formatTime = (iso: string) => {
-    return new Date(iso).toLocaleTimeString('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    })
+    if (!iso) return '--:--:--'
+    try {
+      return new Date(iso).toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+    } catch {
+      return '--:--:--'
+    }
   }
 
   const filteredEvents = events.filter((event) => {
