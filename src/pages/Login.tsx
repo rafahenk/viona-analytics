@@ -4,35 +4,38 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Aperture } from 'lucide-react'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { Aperture, AlertCircle, MailCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
 
 export default function Login() {
   const navigate = useNavigate()
-  const { signIn } = useAuth()
+  const { signIn, resendConfirmation } = useAuth()
   const [loading, setLoading] = useState(false)
+  const [resending, setResending] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [needsConfirmation, setNeedsConfirmation] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setErrorMsg('')
+    setNeedsConfirmation(false)
+
     try {
       const { error } = await signIn(email, password)
+
       if (error) {
         if (
           error.message === 'Email not confirmed' ||
           (error as any).code === 'email_not_confirmed'
         ) {
-          toast.error('E-mail não confirmado', {
-            description:
-              'Por favor, verifique sua caixa de entrada e confirme seu e-mail antes de acessar.',
-          })
+          setNeedsConfirmation(true)
         } else {
-          toast.error('Erro nas credenciais', {
-            description: 'E-mail não cadastrado ou senha incorreta.',
-          })
+          setErrorMsg('E-mail não cadastrado ou senha incorreta.')
         }
         setLoading(false)
         return
@@ -40,11 +43,27 @@ export default function Login() {
 
       navigate('/dashboard')
     } catch (error: any) {
-      toast.error('Erro de Autenticação', {
-        description: 'Ocorreu um erro inesperado ao tentar logar. Tente novamente.',
-      })
+      setErrorMsg('Ocorreu um erro inesperado ao tentar logar. Tente novamente.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleResendConfirmation = async () => {
+    if (!email || !resendConfirmation) return
+    setResending(true)
+    try {
+      const { error } = await resendConfirmation(email)
+      if (error) {
+        toast.error('Erro ao reenviar', { description: error.message })
+      } else {
+        toast.success('E-mail enviado', { description: 'Verifique sua caixa de entrada e spam.' })
+        setNeedsConfirmation(false)
+      }
+    } catch (err: any) {
+      toast.error('Erro ao reenviar', { description: 'Tente novamente mais tarde.' })
+    } finally {
+      setResending(false)
     }
   }
 
@@ -66,6 +85,36 @@ export default function Login() {
             <CardDescription>Insira seu email e senha para acessar o portal</CardDescription>
           </CardHeader>
           <CardContent>
+            {needsConfirmation && (
+              <Alert className="mb-6 bg-amber-500/10 text-amber-500 border-amber-500/20">
+                <AlertCircle className="h-4 w-4 !text-amber-500" />
+                <AlertTitle>E-mail não confirmado</AlertTitle>
+                <AlertDescription className="flex flex-col gap-3 mt-2 text-amber-500/90">
+                  <p>
+                    Por favor, verifique sua caixa de entrada ou spam para confirmar seu cadastro.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full bg-transparent border-amber-500/30 hover:bg-amber-500/10 hover:text-amber-500"
+                    onClick={handleResendConfirmation}
+                    disabled={resending}
+                  >
+                    <MailCheck className="mr-2 h-4 w-4" />
+                    {resending ? 'Reenviando...' : 'Reenviar e-mail de confirmação'}
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {errorMsg && (
+              <Alert variant="destructive" className="mb-6">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{errorMsg}</AlertDescription>
+              </Alert>
+            )}
+
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email Corporativo</Label>
@@ -74,7 +123,11 @@ export default function Login() {
                   type="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    setErrorMsg('')
+                    setNeedsConfirmation(false)
+                  }}
                 />
               </div>
               <div className="space-y-2">
@@ -89,7 +142,10 @@ export default function Login() {
                   type="password"
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value)
+                    setErrorMsg('')
+                  }}
                 />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
