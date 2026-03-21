@@ -269,6 +269,7 @@ export type Database = {
           is_super_admin: boolean | null
           organization_id: string | null
           role: string | null
+          username: string | null
         }
         Insert: {
           created_at?: string
@@ -277,6 +278,7 @@ export type Database = {
           is_super_admin?: boolean | null
           organization_id?: string | null
           role?: string | null
+          username?: string | null
         }
         Update: {
           created_at?: string
@@ -285,6 +287,7 @@ export type Database = {
           is_super_admin?: boolean | null
           organization_id?: string | null
           role?: string | null
+          username?: string | null
         }
         Relationships: [
           {
@@ -553,6 +556,7 @@ export const Constants = {
 //   role: text (nullable, default: 'viewer'::text)
 //   created_at: timestamp with time zone (not null, default: now())
 //   is_super_admin: boolean (nullable, default: false)
+//   username: text (nullable)
 // Table: usage_logs
 //   id: uuid (not null, default: gen_random_uuid())
 //   organization_id: uuid (not null)

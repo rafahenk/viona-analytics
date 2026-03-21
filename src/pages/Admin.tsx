@@ -20,7 +20,8 @@ export default function Admin() {
     )
   }
 
-  const isGestor = profile?.role === 'admin' || profile?.is_super_admin
+  // Gestores são todos os usuários que não são operadores (ou seja, os que logaram via e-mail)
+  const isGestor = profile && (profile.role !== 'operator' || profile.is_super_admin)
 
   if (!isGestor) {
     return (

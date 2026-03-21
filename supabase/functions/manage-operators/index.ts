@@ -30,7 +30,9 @@ Deno.serve(async (req: Request) => {
       .select('role, organization_id, is_super_admin')
       .eq('id', user.id)
       .single()
-    if (profile?.role !== 'admin' && !profile?.is_super_admin) {
+
+    // Gestores são todos os usuários que NÃO SÃO operadores
+    if (profile?.role === 'operator' && !profile?.is_super_admin) {
       throw new Error('Forbidden: Apenas gestores podem realizar esta ação.')
     }
 
@@ -100,7 +102,7 @@ Deno.serve(async (req: Request) => {
       if (!profile.is_super_admin) {
         if (
           targetProfile.organization_id !== profile.organization_id ||
-          targetProfile.role === 'admin'
+          targetProfile.role !== 'operator'
         ) {
           throw new Error('Não é possível remover este usuário.')
         }
