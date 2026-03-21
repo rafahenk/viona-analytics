@@ -17,13 +17,17 @@ Deno.serve(async (req: Request) => {
 
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
+      auth: { persistSession: false },
     })
 
+    const jwt = authHeader.replace('Bearer ', '')
     const {
       data: { user },
       error: userError,
-    } = await supabaseClient.auth.getUser()
-    if (userError || !user) throw new Error('Unauthorized')
+    } = await supabaseClient.auth.getUser(jwt)
+    if (userError || !user) {
+      throw new Error(`Unauthorized: ${userError?.message || 'Invalid token'}`)
+    }
 
     const { data: profile } = await supabaseClient
       .from('profiles')
@@ -36,7 +40,9 @@ Deno.serve(async (req: Request) => {
       throw new Error('Forbidden: Apenas gestores podem realizar esta ação.')
     }
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false },
+    })
 
     if (req.method === 'POST') {
       const { username, password, fullName } = await req.json()
@@ -61,7 +67,7 @@ Deno.serve(async (req: Request) => {
 
       const { error: insertProfileError } = await supabaseAdmin.from('profiles').insert({
         id: userData.user.id,
-        organization_id: profile.organization_id,
+        organization_id: profile?.organization_id,
         full_name: fullName,
         role: 'operator',
         username: cleanUsername,
@@ -71,7 +77,7 @@ Deno.serve(async (req: Request) => {
         await supabaseAdmin
           .from('profiles')
           .update({
-            organization_id: profile.organization_id,
+            organization_id: profile?.organization_id,
             full_name: fullName,
             role: 'operator',
             username: cleanUsername,
@@ -99,9 +105,9 @@ Deno.serve(async (req: Request) => {
         throw new Error('User not found')
       }
 
-      if (!profile.is_super_admin) {
+      if (!profile?.is_super_admin) {
         if (
-          targetProfile.organization_id !== profile.organization_id ||
+          targetProfile.organization_id !== profile?.organization_id ||
           targetProfile.role !== 'operator'
         ) {
           throw new Error('Não é possível remover este usuário.')

@@ -654,7 +654,7 @@ export const Constants = {
 //   Policy "Cameras DELETE" (DELETE, PERMISSIVE) roles={public}
 //     USING: (organization_id = get_auth_user_organization_id())
 //   Policy "Cameras INSERT" (INSERT, PERMISSIVE) roles={public}
-//     WITH CHECK: (organization_id = get_auth_user_organization_id())
+//     WITH CHECK: true
 //   Policy "Cameras SELECT" (SELECT, PERMISSIVE) roles={public}
 //     USING: (organization_id = get_auth_user_organization_id())
 //   Policy "Cameras UPDATE" (UPDATE, PERMISSIVE) roles={public}
