@@ -15,13 +15,17 @@ export function useProfile() {
     }
 
     const fetchProfile = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('*, organizations(*)')
         .eq('id', user.id)
-        .single()
+        .maybeSingle()
 
-      setProfile(data)
+      if (error) {
+        console.error('Error fetching profile:', error)
+      }
+
+      setProfile(data || null)
       setLoading(false)
     }
 
