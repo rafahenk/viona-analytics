@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Aperture, CheckCircle2 } from 'lucide-react'
+import { Aperture } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
 
@@ -20,14 +20,19 @@ export default function Login() {
     setLoading(true)
     try {
       const { error } = await signIn(email, password)
-      if (error) throw error
+      if (error) {
+        toast.error('Erro nas credenciais', {
+          description: 'Usuário não encontrado ou senha incorreta.',
+        })
+        setLoading(false)
+        return
+      }
 
-      toast.success('Login efetuado com sucesso', {
-        icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" />,
-      })
       navigate('/dashboard')
     } catch (error: any) {
-      toast.error('Erro no login', { description: error.message || 'Verifique suas credenciais.' })
+      toast.error('Erro nas credenciais', {
+        description: 'Usuário não encontrado ou senha incorreta.',
+      })
     } finally {
       setLoading(false)
     }

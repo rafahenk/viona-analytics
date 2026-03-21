@@ -12,7 +12,7 @@ import { supabase } from '@/lib/supabase/client'
 
 export default function Register() {
   const navigate = useNavigate()
-  const { signUp, signIn } = useAuth()
+  const { signUp } = useAuth()
   const [loading, setLoading] = useState(false)
 
   const [form, setForm] = useState({
@@ -33,22 +33,6 @@ export default function Register() {
 
     setLoading(true)
     try {
-      // DEVELOPMENT FALLBACK / MOCK:
-      // Se for o email de teste do desenvolvedor (onde já semeamos no banco),
-      // fazemos login direto para evitar o erro 429 de rate limit no endpoint de signup do Supabase.
-      const devEmails = ['rafahenk@hotmail.com', 'rafael@hnkltech.com']
-      if (devEmails.includes(form.email.toLowerCase().trim())) {
-        const { error: signInError } = await signIn(form.email, form.password)
-        if (!signInError) {
-          toast.success('Conta validada com sucesso!', {
-            description: 'Acesso liberado ao ambiente de testes.',
-            icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" />,
-          })
-          navigate('/dashboard')
-          return
-        }
-      }
-
       const { data: authData, error: authError } = await signUp(form.email, form.password, {
         data: { name: form.name },
       })

@@ -17,7 +17,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion'
-import { ArrowRight, Aperture, Check, Zap, Eye, Settings, CreditCard, X } from 'lucide-react'
+import { ArrowRight, Aperture, Check, Zap, Eye, Settings, CreditCard, X, LogIn } from 'lucide-react'
 
 export default function Index() {
   const [simCameras, setSimCameras] = useState(5)
@@ -50,7 +50,7 @@ export default function Index() {
         </nav>
         <div className="flex gap-4">
           <Button variant="ghost" asChild>
-            <Link to="/login">Login</Link>
+            <Link to="/login">Acessar Plataforma</Link>
           </Button>
           <Button asChild>
             <Link to="/register">Criar conta agora</Link>
@@ -82,6 +82,16 @@ export default function Index() {
             >
               <Link to="/register">
                 Começar teste grátis <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-14 px-10 text-base w-full sm:w-auto"
+              asChild
+            >
+              <Link to="/login">
+                Acessar minha conta <LogIn className="ml-2 h-5 w-5" />
               </Link>
             </Button>
           </div>

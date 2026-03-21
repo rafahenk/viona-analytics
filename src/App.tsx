@@ -14,6 +14,7 @@ import AnalyticsStore from './pages/AnalyticsStore'
 import Events from './pages/Events'
 import Billing from './pages/Billing'
 import Admin from './pages/Admin'
+import Profile from './pages/Profile'
 import NotFound from './pages/NotFound'
 
 const App = () => (
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/events" element={<Events />} />
             <Route path="/billing" element={<Billing />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/profile" element={<Profile />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

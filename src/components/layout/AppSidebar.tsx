@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   Sidebar,
   SidebarContent,
@@ -20,9 +20,17 @@ import {
   LogOut,
   Aperture,
 } from 'lucide-react'
+import { useAuth } from '@/hooks/use-auth'
 
 export function AppSidebar() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { signOut } = useAuth()
+
+  const handleLogout = async () => {
+    await signOut()
+    navigate('/')
+  }
 
   const navItems = [
     { title: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
@@ -84,11 +92,12 @@ export function AppSidebar() {
       <SidebarFooter className="border-t border-border/50 p-4">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild className="text-muted-foreground hover:text-foreground">
-              <Link to="/" className="flex items-center gap-3 py-2">
-                <LogOut className="h-4 w-4" />
-                <span>Sair</span>
-              </Link>
+            <SidebarMenuButton
+              onClick={handleLogout}
+              className="text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Sair</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
