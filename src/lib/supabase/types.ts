@@ -689,7 +689,7 @@ export const Constants = {
 //    SECURITY DEFINER
 //    SET search_path TO ''
 //   AS $function$
-//     SELECT role = 'admin' FROM public.profiles WHERE id = auth.uid() LIMIT 1;
+//     SELECT coalesce(role, '') != 'operator' FROM public.profiles WHERE id = auth.uid() LIMIT 1;
 //   $function$
 //
 // FUNCTION is_super_admin()

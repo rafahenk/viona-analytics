@@ -6,10 +6,14 @@ import { PlansTab } from '@/components/admin/PlansTab'
 import { LogsTab } from '@/components/admin/LogsTab'
 import { TenantOperatorsTab } from '@/components/admin/TenantOperatorsTab'
 import { useProfile } from '@/hooks/use-profile'
+import { useAuth } from '@/hooks/use-auth'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 export default function Admin() {
-  const { profile, loading } = useProfile()
+  const { profile, loading: profileLoading } = useProfile()
+  const { user, loading: authLoading } = useAuth()
+
+  const loading = profileLoading || authLoading
 
   if (loading) {
     return (
@@ -20,8 +24,12 @@ export default function Admin() {
     )
   }
 
-  // Gestores são todos os usuários que não são operadores (ou seja, os que logaram via e-mail)
-  const isGestor = profile && (profile.role !== 'operator' || profile.is_super_admin)
+  // Verifica se o email logado possui o domínio sintético dos usuários restritos (operadores)
+  const isOperatorAccount = user?.email?.endsWith('@operator.viona.local')
+
+  // Gestores são garantidos se o login foi efetuado com email real, independente do "role" inicial estar incorreto,
+  // ou se o usuário for explicitamente super admin.
+  const isGestor = profile && (!isOperatorAccount || profile.is_super_admin)
 
   if (!isGestor) {
     return (
@@ -29,8 +37,8 @@ export default function Admin() {
         <ShieldAlert className="h-5 w-5" />
         <AlertTitle className="text-lg">Acesso Restrito</AlertTitle>
         <AlertDescription className="text-base mt-2">
-          Esta área é exclusiva para gestores da plataforma. Como operador, você tem acesso apenas
-          às áreas operacionais e de monitoramento.
+          Esta área é exclusiva para gestores da plataforma. Como usuário com acesso restrito, você
+          tem acesso apenas às áreas operacionais e de monitoramento.
         </AlertDescription>
       </Alert>
     )
@@ -43,7 +51,7 @@ export default function Admin() {
         <p className="text-muted-foreground">
           {profile?.is_super_admin
             ? 'Gestão global de clientes, usuários, planos e auditoria da plataforma.'
-            : 'Gestão de acesso e operadores do sistema na sua organização.'}
+            : 'Gestão de acesso e usuários do sistema na sua organização.'}
         </p>
       </div>
 
@@ -68,7 +76,7 @@ export default function Admin() {
             </>
           )}
           <TabsTrigger value="operators" className="flex-1 sm:flex-none">
-            <Users className="h-4 w-4 mr-2 hidden sm:block" /> Operadores da Conta
+            <Users className="h-4 w-4 mr-2 hidden sm:block" /> Usuários da Conta
           </TabsTrigger>
         </TabsList>
 

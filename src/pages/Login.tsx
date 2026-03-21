@@ -3,18 +3,21 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { Aperture, AlertCircle, MailCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
+import { cn } from '@/lib/utils'
 
 export default function Login() {
   const navigate = useNavigate()
   const { signIn, resendConfirmation } = useAuth()
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
-  const [email, setEmail] = useState('')
+  const [loginType, setLoginType] = useState<'gestor' | 'usuario'>('gestor')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [needsConfirmation, setNeedsConfirmation] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
@@ -26,14 +29,16 @@ export default function Login() {
     setNeedsConfirmation(false)
 
     try {
-      let loginIdentifier = email.trim()
+      let finalIdentifier = identifier.trim()
 
-      // If it doesn't contain @, treat as an operator username
-      if (!loginIdentifier.includes('@')) {
-        loginIdentifier = `${loginIdentifier.toLowerCase().replace(/[^a-z0-9_.-]/g, '')}@operator.viona.local`
+      // Valida como usuário (adiciona sufixo interno se for o caso)
+      if (loginType === 'usuario') {
+        if (!finalIdentifier.includes('@')) {
+          finalIdentifier = `${finalIdentifier.toLowerCase().replace(/[^a-z0-9_.-]/g, '')}@operator.viona.local`
+        }
       }
 
-      const { error } = await signIn(loginIdentifier, password)
+      const { error } = await signIn(finalIdentifier, password)
 
       if (error) {
         if (
@@ -57,10 +62,10 @@ export default function Login() {
   }
 
   const handleResendConfirmation = async () => {
-    if (!email || !resendConfirmation) return
+    if (!identifier || !resendConfirmation || loginType === 'usuario') return
     setResending(true)
     try {
-      const { error } = await resendConfirmation(email)
+      const { error } = await resendConfirmation(identifier)
       if (error) {
         toast.error('Erro ao reenviar', { description: error.message })
       } else {
@@ -89,12 +94,51 @@ export default function Login() {
         <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
           <CardHeader className="space-y-1">
             <CardTitle className="text-xl">Login</CardTitle>
-            <CardDescription>
-              Insira seu email (Gestor) ou usuário (Operador) para acessar o portal
-            </CardDescription>
+            <CardDescription>Selecione seu perfil de acesso para entrar no portal</CardDescription>
           </CardHeader>
           <CardContent>
-            {needsConfirmation && (
+            <div className="flex items-center justify-center space-x-6 mb-6 py-2">
+              <Label
+                className={cn(
+                  'cursor-pointer text-base transition-colors',
+                  loginType === 'gestor'
+                    ? 'text-primary font-bold'
+                    : 'text-muted-foreground font-medium hover:text-foreground',
+                )}
+                onClick={() => {
+                  setLoginType('gestor')
+                  setIdentifier('')
+                  setErrorMsg('')
+                }}
+              >
+                Gestor
+              </Label>
+              <Switch
+                checked={loginType === 'usuario'}
+                onCheckedChange={(checked) => {
+                  setLoginType(checked ? 'usuario' : 'gestor')
+                  setIdentifier('')
+                  setErrorMsg('')
+                }}
+              />
+              <Label
+                className={cn(
+                  'cursor-pointer text-base transition-colors',
+                  loginType === 'usuario'
+                    ? 'text-primary font-bold'
+                    : 'text-muted-foreground font-medium hover:text-foreground',
+                )}
+                onClick={() => {
+                  setLoginType('usuario')
+                  setIdentifier('')
+                  setErrorMsg('')
+                }}
+              >
+                Usuário
+              </Label>
+            </div>
+
+            {needsConfirmation && loginType === 'gestor' && (
               <Alert className="mb-6 bg-amber-500/10 text-amber-500 border-amber-500/20">
                 <AlertCircle className="h-4 w-4 !text-amber-500" />
                 <AlertTitle>E-mail não confirmado</AlertTitle>
@@ -126,15 +170,17 @@ export default function Login() {
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email Corporativo ou Usuário</Label>
+                <Label htmlFor="identifier">
+                  {loginType === 'gestor' ? 'Email Corporativo' : 'Nome de Usuário'}
+                </Label>
                 <Input
-                  id="email"
-                  type="text"
+                  id="identifier"
+                  type={loginType === 'gestor' ? 'email' : 'text'}
                   required
-                  placeholder="gestor@empresa.com ou nomedeusuario"
-                  value={email}
+                  placeholder={loginType === 'gestor' ? 'gestor@empresa.com' : 'nomedeusuario'}
+                  value={identifier}
                   onChange={(e) => {
-                    setEmail(e.target.value)
+                    setIdentifier(e.target.value)
                     setErrorMsg('')
                     setNeedsConfirmation(false)
                   }}
@@ -143,9 +189,11 @@ export default function Login() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Senha</Label>
-                  <a href="#" className="text-xs font-medium text-primary hover:underline">
-                    Esqueceu a senha?
-                  </a>
+                  {loginType === 'gestor' && (
+                    <a href="#" className="text-xs font-medium text-primary hover:underline">
+                      Esqueceu a senha?
+                    </a>
+                  )}
                 </div>
                 <Input
                   id="password"
@@ -164,12 +212,14 @@ export default function Login() {
             </form>
           </CardContent>
         </Card>
-        <p className="text-center text-sm text-muted-foreground">
-          Não tem uma conta?{' '}
-          <Link to="/register" className="font-semibold text-primary hover:underline">
-            Criar conta agora
-          </Link>
-        </p>
+        {loginType === 'gestor' && (
+          <p className="text-center text-sm text-muted-foreground">
+            Não tem uma conta?{' '}
+            <Link to="/register" className="font-semibold text-primary hover:underline">
+              Criar conta agora
+            </Link>
+          </p>
+        )}
       </div>
     </div>
   )
