@@ -9,6 +9,7 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { Aperture, AlertCircle, MailCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
+import { supabase } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 
 export default function Login() {
@@ -22,7 +23,6 @@ export default function Login() {
   const [password, setPassword] = useState('')
 
   const [errors, setErrors] = useState({ identifier: '', password: '' })
-
   const [needsConfirmation, setNeedsConfirmation] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -68,7 +68,6 @@ export default function Login() {
     try {
       let finalIdentifier = identifier.trim()
 
-      // Valida como usuário (adiciona sufixo interno se for o caso)
       if (loginType === 'usuario') {
         if (!finalIdentifier.includes('@')) {
           finalIdentifier = `${finalIdentifier.toLowerCase().replace(/[^a-z0-9_.-]/g, '')}@operator.viona.local`
@@ -92,6 +91,25 @@ export default function Login() {
         }
         setLoading(false)
         return
+      }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (user) {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('organization_id')
+          .eq('id', user.id)
+          .single()
+        if (prof?.organization_id) {
+          await supabase.from('audit_logs').insert({
+            action: 'Login no sistema',
+            entity_type: 'auth',
+            user_id: user.id,
+            details: { organization_id: prof.organization_id },
+          })
+        }
       }
 
       navigate('/dashboard')

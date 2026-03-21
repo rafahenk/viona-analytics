@@ -14,9 +14,11 @@ import { ArrowLeft, PlayCircle, StopCircle, Info } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { getAnalyticUI } from '@/lib/constants'
 import { toast } from 'sonner'
+import { useProfile } from '@/hooks/use-profile'
 
 export default function CameraAnalytics() {
   const { id: cameraId } = useParams()
+  const { profile } = useProfile()
   const [camera, setCamera] = useState<any>(null)
   const [catalog, setCatalog] = useState<any[]>([])
   const [activeIds, setActiveIds] = useState<string[]>([])
@@ -57,6 +59,17 @@ export default function CameraAnalytics() {
           .from('camera_analytics_config')
           .insert({ camera_id: cameraId, analytic_id: analytic.id })
         setActiveIds((prev) => [...prev, analytic.id])
+
+        await supabase.from('audit_logs').insert({
+          action: 'Ativação de analítico',
+          entity_type: 'analytic',
+          user_id: profile?.id,
+          details: {
+            organization_id: profile?.organization_id,
+            target_name: `${analytic.name} em ${camera?.name}`,
+          },
+        })
+
         toast.success(`${analytic.name} ativado com sucesso!`)
       } else {
         await supabase
@@ -64,6 +77,17 @@ export default function CameraAnalytics() {
           .delete()
           .match({ camera_id: cameraId, analytic_id: analytic.id })
         setActiveIds((prev) => prev.filter((aId) => aId !== analytic.id))
+
+        await supabase.from('audit_logs').insert({
+          action: 'Desativação de analítico',
+          entity_type: 'analytic',
+          user_id: profile?.id,
+          details: {
+            organization_id: profile?.organization_id,
+            target_name: `${analytic.name} em ${camera?.name}`,
+          },
+        })
+
         toast.success(`${analytic.name} desativado.`)
       }
     } catch (err: any) {
@@ -80,7 +104,7 @@ export default function CameraAnalytics() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link to="/dashboard">
+          <Link to="/cameras">
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>

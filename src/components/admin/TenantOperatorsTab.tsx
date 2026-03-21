@@ -11,7 +11,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
-import { Info, Plus, Trash2, Key, ShieldCheck } from 'lucide-react'
+import { Info, Plus, Trash2, Key, ShieldCheck, Copy, RefreshCw } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
@@ -23,49 +23,55 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useProfile } from '@/hooks/use-profile'
+
+const generateRandomPassword = () => {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*'
+  let pass = ''
+  for (let i = 0; i < 12; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length))
+  return pass
+}
 
 export function TenantOperatorsTab() {
+  const { profile } = useProfile()
   const [operators, setOperators] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ username: '', fullName: '', password: '' })
   const [submitting, setSubmitting] = useState(false)
+  const [createdCreds, setCreatedCreds] = useState<{
+    username: string
+    password?: string
+    fullName: string
+  } | null>(null)
 
   const loadData = async () => {
+    if (!profile?.organization_id) return
     setLoading(true)
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) {
-      setLoading(false)
-      return
-    }
-    const { data: profile } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
+      .select('*')
+      .eq('organization_id', profile.organization_id)
+      .eq('role', 'operator')
+      .order('created_at', { ascending: false })
 
-    if (profile?.organization_id) {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('organization_id', profile.organization_id)
-        .eq('role', 'operator')
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        toast.error('Erro ao carregar operadores')
-      } else {
-        setOperators(data || [])
-      }
+    if (error) {
+      toast.error('Erro ao carregar operadores')
+    } else {
+      setOperators(data || [])
     }
     setLoading(false)
   }
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [profile])
+
+  useEffect(() => {
+    if (open) {
+      setForm((prev) => ({ ...prev, password: generateRandomPassword() }))
+    }
+  }, [open])
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -78,7 +84,14 @@ export function TenantOperatorsTab() {
       if (error) throw error
       if (data?.error) throw new Error(data.error)
 
-      toast.success('Operador criado com sucesso!')
+      await supabase.from('audit_logs').insert({
+        action: 'Inclusão de usuário',
+        entity_type: 'profile',
+        user_id: profile?.id,
+        details: { organization_id: profile?.organization_id, target_username: form.username },
+      })
+
+      setCreatedCreds({ username: form.username, password: form.password, fullName: form.fullName })
       setOpen(false)
       setForm({ username: '', fullName: '', password: '' })
       loadData()
@@ -89,13 +102,8 @@ export function TenantOperatorsTab() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (
-      !confirm(
-        'Tem certeza que deseja remover este operador? O acesso dele será revogado imediatamente e os dados de login apagados.',
-      )
-    )
-      return
+  const handleDelete = async (id: string, username: string) => {
+    if (!confirm('Tem certeza que deseja remover este operador?')) return
     try {
       const { data, error } = await supabase.functions.invoke('manage-operators', {
         method: 'DELETE',
@@ -105,11 +113,52 @@ export function TenantOperatorsTab() {
       if (error) throw error
       if (data?.error) throw new Error(data.error)
 
+      await supabase.from('audit_logs').insert({
+        action: 'Exclusão de usuário',
+        entity_type: 'profile',
+        user_id: profile?.id,
+        details: { organization_id: profile?.organization_id, target_username: username },
+      })
+
       toast.success('Operador removido com sucesso!')
       loadData()
     } catch (err: any) {
       toast.error('Erro ao remover operador', { description: err.message })
     }
+  }
+
+  const handleResetPassword = async (opId: string, username: string, fullName: string) => {
+    if (!confirm('Gerar uma nova senha aleatória para este operador?')) return
+    try {
+      const newPass = generateRandomPassword()
+      const { data, error } = await supabase.functions.invoke('manage-operators', {
+        method: 'PUT',
+        body: { userId: opId, newPassword: newPass },
+      })
+
+      if (error) throw error
+      if (data?.error) throw new Error(data.error)
+
+      await supabase.from('audit_logs').insert({
+        action: 'Reset de senha de usuário',
+        entity_type: 'profile',
+        user_id: profile?.id,
+        details: { organization_id: profile?.organization_id, target_username: username },
+      })
+
+      setCreatedCreds({ username, password: newPass, fullName })
+    } catch (err: any) {
+      toast.error('Erro ao resetar senha', { description: err.message })
+    }
+  }
+
+  const copyCreds = () => {
+    if (!createdCreds) return
+    const text = `Olá ${createdCreds.fullName},\nSeu acesso foi configurado.\n\nUsuário: ${createdCreds.username}\nSenha: ${createdCreds.password}\n\nAcesse a plataforma para visualizar as câmeras.`
+    navigator.clipboard.writeText(text)
+    toast.success('Credenciais copiadas!', {
+      description: 'Pronto para colar e enviar ao usuário.',
+    })
   }
 
   return (
@@ -121,8 +170,7 @@ export function TenantOperatorsTab() {
             Controle de Acesso Operacional
           </h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Adicione membros da equipe que usarão a plataforma apenas para monitoramento (login via
-            usuário e senha).
+            Adicione membros da equipe que usarão a plataforma apenas para monitoramento.
           </p>
         </div>
         <Button onClick={() => setOpen(true)} className="w-full sm:w-auto">
@@ -175,14 +223,26 @@ export function TenantOperatorsTab() {
                       {new Date(operator.created_at).toLocaleDateString('pt-BR')}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:bg-destructive/10"
-                        onClick={() => handleDelete(operator.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            handleResetPassword(operator.id, operator.username, operator.full_name)
+                          }
+                          title="Resetar e gerar nova senha"
+                        >
+                          <RefreshCw className="h-4 w-4 mr-2" /> Reset Senha
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDelete(operator.id, operator.username)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -197,8 +257,7 @@ export function TenantOperatorsTab() {
           <DialogHeader>
             <DialogTitle>Cadastrar Novo Operador</DialogTitle>
             <DialogDescription>
-              Crie um acesso restrito para um membro da equipe. O operador fará login usando o nome
-              de usuário definido aqui.
+              Crie um acesso restrito para um membro da equipe. A senha será gerada automaticamente.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreate} className="space-y-4 pt-4">
@@ -231,16 +290,17 @@ export function TenantOperatorsTab() {
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Senha de Acesso</Label>
+              <Label htmlFor="password">Senha Gerada (Oculta)</Label>
               <Input
                 id="password"
                 type="password"
                 value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                required
-                placeholder="Mínimo 6 caracteres"
-                minLength={6}
+                readOnly
+                className="bg-muted font-mono"
               />
+              <p className="text-xs text-muted-foreground">
+                A senha será exibida para cópia na próxima tela.
+              </p>
             </div>
             <DialogFooter className="pt-4">
               <Button
@@ -256,6 +316,38 @@ export function TenantOperatorsTab() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!createdCreds} onOpenChange={(v) => !v && setCreatedCreds(null)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Credenciais de Acesso</DialogTitle>
+            <DialogDescription>
+              As credenciais para <strong>{createdCreds?.fullName}</strong> estão prontas. Copie
+              agora, pois a senha não será exibida novamente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="p-4 bg-muted/50 rounded-lg border border-border/50 space-y-2 font-mono text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Usuário:</span>
+                <span className="font-bold">{createdCreds?.username}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Senha:</span>
+                <span className="font-bold">{createdCreds?.password}</span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreatedCreds(null)}>
+              Fechar
+            </Button>
+            <Button onClick={copyCreds}>
+              <Copy className="h-4 w-4 mr-2" /> Copiar para Envio
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

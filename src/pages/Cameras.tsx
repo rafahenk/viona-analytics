@@ -54,11 +54,19 @@ export default function Cameras() {
     }
   }, [profile, profileLoading])
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, name: string) => {
     if (!confirm('Tem certeza que deseja remover esta câmera?')) return
     try {
       const { error } = await supabase.from('cameras').delete().eq('id', id)
       if (error) throw error
+
+      await supabase.from('audit_logs').insert({
+        action: 'Exclusão de câmera',
+        entity_type: 'camera',
+        user_id: profile?.id,
+        details: { organization_id: profile?.organization_id, target_name: name },
+      })
+
       toast.success('Câmera removida com sucesso.')
       loadCameras()
     } catch (error: any) {
@@ -67,13 +75,14 @@ export default function Cameras() {
     }
   }
 
-  const handleToggleActive = async (id: string, currentStatus: boolean) => {
+  const handleToggleActive = async (id: string, currentStatus: boolean, name: string) => {
     try {
       const { error } = await supabase
         .from('cameras')
         .update({ is_active: currentStatus })
         .eq('id', id)
       if (error) throw error
+
       toast.success(currentStatus ? 'Câmera ativada com sucesso.' : 'Câmera inativada com sucesso.')
       setCameras(cameras.map((c) => (c.id === id ? { ...c, is_active: currentStatus } : c)))
     } catch (err: any) {
@@ -192,7 +201,9 @@ export default function Cameras() {
                     <div className="flex items-center gap-2">
                       <Switch
                         checked={camera.is_active !== false}
-                        onCheckedChange={(checked) => handleToggleActive(camera.id, checked)}
+                        onCheckedChange={(checked) =>
+                          handleToggleActive(camera.id, checked, camera.name)
+                        }
                       />
                       <Badge
                         variant={camera.is_active !== false ? 'default' : 'secondary'}
@@ -220,7 +231,7 @@ export default function Cameras() {
                         variant="ghost"
                         size="icon"
                         className="text-destructive hover:bg-destructive/10"
-                        onClick={() => handleDelete(camera.id)}
+                        onClick={() => handleDelete(camera.id, camera.name)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

@@ -1,10 +1,13 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Building2, Users2, Shield, ActivitySquare, ShieldAlert, Users } from 'lucide-react'
+import { Building2, Users2, Shield, ActivitySquare, ShieldAlert, Users, Video } from 'lucide-react'
 import { OrganizationsTab } from '@/components/admin/OrganizationsTab'
 import { UsersTab } from '@/components/admin/UsersTab'
 import { PlansTab } from '@/components/admin/PlansTab'
 import { LogsTab } from '@/components/admin/LogsTab'
 import { TenantOperatorsTab } from '@/components/admin/TenantOperatorsTab'
+import { CameraAccessTab } from '@/components/admin/CameraAccessTab'
+import { AccessControlTab } from '@/components/admin/AccessControlTab'
+import { TenantLogsTab } from '@/components/admin/TenantLogsTab'
 import { useProfile } from '@/hooks/use-profile'
 import { useAuth } from '@/hooks/use-auth'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -24,7 +27,6 @@ export default function Admin() {
     )
   }
 
-  // Permite acesso se o usuário for explicitamente "admin" ou "super_admin" no perfil
   const isGestor = profile && (profile.role === 'admin' || profile.is_super_admin)
 
   if (!isGestor) {
@@ -47,7 +49,7 @@ export default function Admin() {
         <p className="text-muted-foreground">
           {profile?.is_super_admin
             ? 'Gestão global de clientes, usuários, planos e auditoria da plataforma.'
-            : 'Gestão de acesso e usuários do sistema na sua organização.'}
+            : 'Gestão de acesso, câmeras e usuários da sua organização.'}
         </p>
       </div>
 
@@ -72,7 +74,16 @@ export default function Admin() {
             </>
           )}
           <TabsTrigger value="operators" className="flex-1 sm:flex-none">
-            <Users className="h-4 w-4 mr-2 hidden sm:block" /> Usuários da Conta
+            <Users className="h-4 w-4 mr-2 hidden sm:block" /> Usuários
+          </TabsTrigger>
+          <TabsTrigger value="camera-access" className="flex-1 sm:flex-none">
+            <Video className="h-4 w-4 mr-2 hidden sm:block" /> Acesso às Câmeras
+          </TabsTrigger>
+          <TabsTrigger value="access-control" className="flex-1 sm:flex-none">
+            <Shield className="h-4 w-4 mr-2 hidden sm:block" /> Controle de Acesso
+          </TabsTrigger>
+          <TabsTrigger value="tenant-logs" className="flex-1 sm:flex-none">
+            <ActivitySquare className="h-4 w-4 mr-2 hidden sm:block" /> Logs de Atividade
           </TabsTrigger>
         </TabsList>
 
@@ -81,15 +92,12 @@ export default function Admin() {
             <TabsContent value="tenants" className="mt-6 animate-slide-up">
               <OrganizationsTab />
             </TabsContent>
-
             <TabsContent value="users" className="mt-6 animate-slide-up">
               <UsersTab />
             </TabsContent>
-
             <TabsContent value="plans" className="mt-6 animate-slide-up">
               <PlansTab />
             </TabsContent>
-
             <TabsContent value="logs" className="mt-6 animate-slide-up">
               <LogsTab />
             </TabsContent>
@@ -98,6 +106,15 @@ export default function Admin() {
 
         <TabsContent value="operators" className="mt-6 animate-slide-up">
           <TenantOperatorsTab />
+        </TabsContent>
+        <TabsContent value="camera-access" className="mt-6 animate-slide-up">
+          <CameraAccessTab />
+        </TabsContent>
+        <TabsContent value="access-control" className="mt-6 animate-slide-up">
+          <AccessControlTab />
+        </TabsContent>
+        <TabsContent value="tenant-logs" className="mt-6 animate-slide-up">
+          <TenantLogsTab />
         </TabsContent>
       </Tabs>
     </div>

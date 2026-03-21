@@ -35,7 +35,6 @@ Deno.serve(async (req: Request) => {
       .eq('id', user.id)
       .single()
 
-    // Gestores são todos os usuários que NÃO SÃO operadores
     if (profile?.role === 'operator' && !profile?.is_super_admin) {
       throw new Error('Forbidden: Apenas gestores podem realizar esta ação.')
     }
@@ -91,6 +90,38 @@ Deno.serve(async (req: Request) => {
       })
     }
 
+    if (req.method === 'PUT') {
+      const { userId, newPassword } = await req.json()
+      if (!userId || !newPassword) throw new Error('Dados incompletos')
+
+      const { data: targetProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('organization_id, role')
+        .eq('id', userId)
+        .single()
+
+      if (!targetProfile) throw new Error('User not found')
+
+      if (!profile?.is_super_admin) {
+        if (
+          targetProfile.organization_id !== profile?.organization_id ||
+          targetProfile.role !== 'operator'
+        ) {
+          throw new Error('Não é possível alterar este usuário.')
+        }
+      }
+
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        password: newPassword,
+      })
+      if (updateError) throw updateError
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      })
+    }
+
     if (req.method === 'DELETE') {
       const { userId } = await req.json()
       if (!userId) throw new Error('Missing userId')
@@ -101,9 +132,7 @@ Deno.serve(async (req: Request) => {
         .eq('id', userId)
         .single()
 
-      if (!targetProfile) {
-        throw new Error('User not found')
-      }
+      if (!targetProfile) throw new Error('User not found')
 
       if (!profile?.is_super_admin) {
         if (
