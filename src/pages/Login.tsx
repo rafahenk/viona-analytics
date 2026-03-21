@@ -21,9 +21,19 @@ export default function Login() {
     try {
       const { error } = await signIn(email, password)
       if (error) {
-        toast.error('Erro nas credenciais', {
-          description: 'E-mail não cadastrado ou senha incorreta.',
-        })
+        if (
+          error.message === 'Email not confirmed' ||
+          (error as any).code === 'email_not_confirmed'
+        ) {
+          toast.error('E-mail não confirmado', {
+            description:
+              'Por favor, verifique sua caixa de entrada e confirme seu e-mail antes de acessar.',
+          })
+        } else {
+          toast.error('Erro nas credenciais', {
+            description: 'E-mail não cadastrado ou senha incorreta.',
+          })
+        }
         setLoading(false)
         return
       }
