@@ -8,12 +8,20 @@ import { useProfile } from '@/hooks/use-profile'
 import { supabase } from '@/lib/supabase/client'
 
 export default function Events() {
-  const { profile } = useProfile()
+  const { profile, loading: profileLoading } = useProfile()
   const [events, setEvents] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loadingEvents, setLoadingEvents] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
-    if (!profile) return
+    if (profileLoading) return
+
+    if (!profile) {
+      setLoadingEvents(false)
+      return
+    }
+
+    setLoadingEvents(true)
     supabase
       .from('events')
       .select('*, cameras(name), analytics_catalog(name, slug)')
@@ -21,9 +29,9 @@ export default function Events() {
       .limit(50)
       .then(({ data }) => {
         setEvents(data || [])
-        setLoading(false)
+        setLoadingEvents(false)
       })
-  }, [profile])
+  }, [profile, profileLoading])
 
   const formatTime = (iso: string) => {
     return new Date(iso).toLocaleTimeString('pt-BR', {
@@ -32,6 +40,17 @@ export default function Events() {
       second: '2-digit',
     })
   }
+
+  const filteredEvents = events.filter((event) => {
+    if (!searchTerm) return true
+    const searchLower = searchTerm.toLowerCase()
+    return (
+      event.analytics_catalog?.name?.toLowerCase().includes(searchLower) ||
+      event.cameras?.name?.toLowerCase().includes(searchLower)
+    )
+  })
+
+  const isLoading = profileLoading || loadingEvents
 
   return (
     <div className="flex flex-col gap-6 h-[calc(100vh-8rem)]">
@@ -50,7 +69,12 @@ export default function Events() {
       <div className="flex gap-4 shrink-0 bg-card p-4 rounded-lg border border-border/50">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar tipo de evento..." className="pl-9 bg-background" />
+          <Input
+            placeholder="Buscar tipo de evento ou câmera..."
+            className="pl-9 bg-background"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
         <Button
           variant="outline"
@@ -64,15 +88,13 @@ export default function Events() {
       </div>
 
       <div className="flex-1 overflow-y-auto pr-2 pb-4 scrollbar-thin">
-        {loading ? (
+        {isLoading ? (
           <div className="text-center py-10 text-muted-foreground">Carregando eventos...</div>
-        ) : events.length === 0 ? (
-          <div className="text-center py-10 text-muted-foreground">
-            Nenhum evento registrado ainda.
-          </div>
+        ) : filteredEvents.length === 0 ? (
+          <div className="text-center py-10 text-muted-foreground">Nenhum evento recebido.</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {events.map((event, i) => (
+            {filteredEvents.map((event, i) => (
               <Card
                 key={event.id}
                 className="overflow-hidden border-border/50 bg-card/50 hover:border-primary/30 transition-colors animate-slide-up"
