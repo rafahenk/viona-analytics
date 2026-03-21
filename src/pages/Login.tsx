@@ -26,7 +26,14 @@ export default function Login() {
     setNeedsConfirmation(false)
 
     try {
-      const { error } = await signIn(email, password)
+      let loginIdentifier = email.trim()
+
+      // If it doesn't contain @, treat as an operator username
+      if (!loginIdentifier.includes('@')) {
+        loginIdentifier = `${loginIdentifier.toLowerCase().replace(/[^a-z0-9_.-]/g, '')}@operator.viona.local`
+      }
+
+      const { error } = await signIn(loginIdentifier, password)
 
       if (error) {
         if (
@@ -35,7 +42,7 @@ export default function Login() {
         ) {
           setNeedsConfirmation(true)
         } else {
-          setErrorMsg('E-mail não cadastrado ou senha incorreta.')
+          setErrorMsg('Credenciais incorretas ou acesso bloqueado.')
         }
         setLoading(false)
         return
@@ -82,7 +89,9 @@ export default function Login() {
         <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
           <CardHeader className="space-y-1">
             <CardTitle className="text-xl">Login</CardTitle>
-            <CardDescription>Insira seu email e senha para acessar o portal</CardDescription>
+            <CardDescription>
+              Insira seu email (Gestor) ou usuário (Operador) para acessar o portal
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {needsConfirmation && (
@@ -117,11 +126,12 @@ export default function Login() {
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email Corporativo</Label>
+                <Label htmlFor="email">Email Corporativo ou Usuário</Label>
                 <Input
                   id="email"
-                  type="email"
+                  type="text"
                   required
+                  placeholder="gestor@empresa.com ou nomedeusuario"
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value)

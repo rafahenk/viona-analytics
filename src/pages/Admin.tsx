@@ -1,9 +1,10 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Building2, Users2, Shield, ActivitySquare, ShieldAlert } from 'lucide-react'
+import { Building2, Users2, Shield, ActivitySquare, ShieldAlert, Users } from 'lucide-react'
 import { OrganizationsTab } from '@/components/admin/OrganizationsTab'
 import { UsersTab } from '@/components/admin/UsersTab'
 import { PlansTab } from '@/components/admin/PlansTab'
 import { LogsTab } from '@/components/admin/LogsTab'
+import { TenantOperatorsTab } from '@/components/admin/TenantOperatorsTab'
 import { useProfile } from '@/hooks/use-profile'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
@@ -19,15 +20,16 @@ export default function Admin() {
     )
   }
 
-  // Ensure only platform admins can see this screen
-  if (!profile?.is_super_admin) {
+  const isGestor = profile?.role === 'admin' || profile?.is_super_admin
+
+  if (!isGestor) {
     return (
       <Alert variant="destructive" className="max-w-2xl mx-auto mt-8 border-destructive/30">
         <ShieldAlert className="h-5 w-5" />
         <AlertTitle className="text-lg">Acesso Restrito</AlertTitle>
         <AlertDescription className="text-base mt-2">
-          Esta área é exclusiva para administradores globais da plataforma Viona. Se você acha que
-          isso é um erro, entre em contato com o suporte.
+          Esta área é exclusiva para gestores da plataforma. Como operador, você tem acesso apenas
+          às áreas operacionais e de monitoramento.
         </AlertDescription>
       </Alert>
     )
@@ -38,40 +40,59 @@ export default function Admin() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Painel Administrativo</h1>
         <p className="text-muted-foreground">
-          Gestão global de clientes, usuários, planos e auditoria da plataforma.
+          {profile?.is_super_admin
+            ? 'Gestão global de clientes, usuários, planos e auditoria da plataforma.'
+            : 'Gestão de acesso e operadores do sistema na sua organização.'}
         </p>
       </div>
 
-      <Tabs defaultValue="tenants" className="w-full">
-        <TabsList className="grid w-full max-w-3xl grid-cols-4 bg-muted/50 p-1">
-          <TabsTrigger value="tenants">
-            <Building2 className="h-4 w-4 mr-2 hidden sm:block" /> Clientes
-          </TabsTrigger>
-          <TabsTrigger value="users">
-            <Users2 className="h-4 w-4 mr-2 hidden sm:block" /> Usuários
-          </TabsTrigger>
-          <TabsTrigger value="plans">
-            <Shield className="h-4 w-4 mr-2 hidden sm:block" /> Planos
-          </TabsTrigger>
-          <TabsTrigger value="logs">
-            <ActivitySquare className="h-4 w-4 mr-2 hidden sm:block" /> Auditoria
+      <Tabs defaultValue={profile?.is_super_admin ? 'tenants' : 'operators'} className="w-full">
+        <TabsList
+          className={`inline-flex w-full sm:w-auto bg-muted/50 p-1 flex-wrap h-auto min-h-10 ${profile?.is_super_admin ? 'justify-start' : 'justify-center'}`}
+        >
+          {profile?.is_super_admin && (
+            <>
+              <TabsTrigger value="tenants" className="flex-1 sm:flex-none">
+                <Building2 className="h-4 w-4 mr-2 hidden sm:block" /> Clientes
+              </TabsTrigger>
+              <TabsTrigger value="users" className="flex-1 sm:flex-none">
+                <Users2 className="h-4 w-4 mr-2 hidden sm:block" /> Usuários Globais
+              </TabsTrigger>
+              <TabsTrigger value="plans" className="flex-1 sm:flex-none">
+                <Shield className="h-4 w-4 mr-2 hidden sm:block" /> Planos
+              </TabsTrigger>
+              <TabsTrigger value="logs" className="flex-1 sm:flex-none">
+                <ActivitySquare className="h-4 w-4 mr-2 hidden sm:block" /> Auditoria
+              </TabsTrigger>
+            </>
+          )}
+          <TabsTrigger value="operators" className="flex-1 sm:flex-none">
+            <Users className="h-4 w-4 mr-2 hidden sm:block" /> Operadores da Conta
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="tenants" className="mt-6 animate-slide-up">
-          <OrganizationsTab />
-        </TabsContent>
+        {profile?.is_super_admin && (
+          <>
+            <TabsContent value="tenants" className="mt-6 animate-slide-up">
+              <OrganizationsTab />
+            </TabsContent>
 
-        <TabsContent value="users" className="mt-6 animate-slide-up">
-          <UsersTab />
-        </TabsContent>
+            <TabsContent value="users" className="mt-6 animate-slide-up">
+              <UsersTab />
+            </TabsContent>
 
-        <TabsContent value="plans" className="mt-6 animate-slide-up">
-          <PlansTab />
-        </TabsContent>
+            <TabsContent value="plans" className="mt-6 animate-slide-up">
+              <PlansTab />
+            </TabsContent>
 
-        <TabsContent value="logs" className="mt-6 animate-slide-up">
-          <LogsTab />
+            <TabsContent value="logs" className="mt-6 animate-slide-up">
+              <LogsTab />
+            </TabsContent>
+          </>
+        )}
+
+        <TabsContent value="operators" className="mt-6 animate-slide-up">
+          <TenantOperatorsTab />
         </TabsContent>
       </Tabs>
     </div>

@@ -640,9 +640,9 @@ export const Constants = {
 //   Policy "Organizations INSERT" (INSERT, PERMISSIVE) roles={public}
 //     WITH CHECK: true
 //   Policy "Organizations SELECT" (SELECT, PERMISSIVE) roles={public}
-//     USING: ((id IN ( SELECT profiles.organization_id    FROM profiles   WHERE (profiles.id = auth.uid()))) OR is_super_admin())
+//     USING: ((id = get_auth_user_organization_id()) OR is_super_admin())
 //   Policy "Organizations UPDATE" (UPDATE, PERMISSIVE) roles={public}
-//     USING: ((id IN ( SELECT profiles.organization_id    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text)))) OR is_super_admin())
+//     USING: (((id = get_auth_user_organization_id()) AND is_admin()) OR is_super_admin())
 // Table: plans
 //   Policy "Plans ALL Admin" (ALL, PERMISSIVE) roles={public}
 //     USING: is_super_admin()
@@ -654,9 +654,9 @@ export const Constants = {
 //   Policy "Profiles INSERT" (INSERT, PERMISSIVE) roles={public}
 //     WITH CHECK: true
 //   Policy "Profiles SELECT" (SELECT, PERMISSIVE) roles={public}
-//     USING: ((organization_id IN ( SELECT profiles_1.organization_id    FROM profiles profiles_1   WHERE (profiles_1.id = auth.uid()))) OR (id = auth.uid()) OR is_super_admin())
+//     USING: ((id = auth.uid()) OR (organization_id = get_auth_user_organization_id()) OR is_super_admin())
 //   Policy "Profiles UPDATE" (UPDATE, PERMISSIVE) roles={public}
-//     USING: ((id = auth.uid()) OR (organization_id IN ( SELECT profiles_1.organization_id    FROM profiles profiles_1   WHERE ((profiles_1.id = auth.uid()) AND (profiles_1.role = 'admin'::text)))) OR is_super_admin())
+//     USING: ((id = auth.uid()) OR ((organization_id = get_auth_user_organization_id()) AND is_admin()) OR is_super_admin())
 // Table: usage_logs
 //   Policy "UsageLogs DELETE" (DELETE, PERMISSIVE) roles={public}
 //     USING: (organization_id = get_auth_user_organization_id())
