@@ -106,6 +106,14 @@ export default function Register() {
 
       if (!authData?.user) throw new Error('Não foi possível criar o usuário.')
 
+      // Check if the user already exists. Supabase returns a fake user with an empty identities array
+      // if email enumeration protection is enabled. This prevents foreign key constraint violations
+      // when attempting to insert into the profiles table with a fake user ID.
+      if (authData.user.identities && authData.user.identities.length === 0) {
+        setFormErrors((prev) => ({ ...prev, email: 'Este e-mail já está em uso' }))
+        throw new Error('Este e-mail já está em uso')
+      }
+
       createdUserId = authData.user.id
 
       // Generate IDs client-side to avoid SELECT returning 0 rows immediately after INSERT due to RLS
@@ -128,7 +136,7 @@ export default function Register() {
       }
 
       const { error: profileError } = await supabase.from('profiles').insert({
-        id: authData.user.id,
+        id: createdUserId,
         organization_id: newOrgId,
         full_name: form.name,
         role: 'admin',

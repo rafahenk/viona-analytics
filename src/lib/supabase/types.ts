@@ -17,6 +17,8 @@ export type Database = {
           name: string
           price_model: string | null
           slug: string
+          trial_duration_days: number | null
+          trial_event_limit: number | null
           unit_price: number
         }
         Insert: {
@@ -26,6 +28,8 @@ export type Database = {
           name: string
           price_model?: string | null
           slug: string
+          trial_duration_days?: number | null
+          trial_event_limit?: number | null
           unit_price?: number
         }
         Update: {
@@ -35,6 +39,8 @@ export type Database = {
           name?: string
           price_model?: string | null
           slug?: string
+          trial_duration_days?: number | null
+          trial_event_limit?: number | null
           unit_price?: number
         }
         Relationships: []
@@ -84,6 +90,10 @@ export type Database = {
           camera_id: string
           id: string
           is_active: boolean | null
+          trial_ends_at: string | null
+          trial_event_limit: number | null
+          trial_events_used: number | null
+          trial_started_at: string | null
         }
         Insert: {
           activated_at?: string
@@ -91,6 +101,10 @@ export type Database = {
           camera_id: string
           id?: string
           is_active?: boolean | null
+          trial_ends_at?: string | null
+          trial_event_limit?: number | null
+          trial_events_used?: number | null
+          trial_started_at?: string | null
         }
         Update: {
           activated_at?: string
@@ -98,6 +112,10 @@ export type Database = {
           camera_id?: string
           id?: string
           is_active?: boolean | null
+          trial_ends_at?: string | null
+          trial_event_limit?: number | null
+          trial_events_used?: number | null
+          trial_started_at?: string | null
         }
         Relationships: [
           {
@@ -121,6 +139,7 @@ export type Database = {
           connection_url: string | null
           created_at: string
           id: string
+          is_active: boolean | null
           name: string
           organization_id: string
           status: string | null
@@ -129,6 +148,7 @@ export type Database = {
           connection_url?: string | null
           created_at?: string
           id?: string
+          is_active?: boolean | null
           name: string
           organization_id: string
           status?: string | null
@@ -137,6 +157,7 @@ export type Database = {
           connection_url?: string | null
           created_at?: string
           id?: string
+          is_active?: boolean | null
           name?: string
           organization_id?: string
           status?: string | null
@@ -505,6 +526,8 @@ export const Constants = {
 //   price_model: text (nullable)
 //   unit_price: numeric (not null, default: 0)
 //   created_at: timestamp with time zone (not null, default: now())
+//   trial_duration_days: integer (nullable, default: 7)
+//   trial_event_limit: integer (nullable, default: 100)
 // Table: audit_logs
 //   id: uuid (not null, default: gen_random_uuid())
 //   user_id: uuid (nullable)
@@ -519,6 +542,10 @@ export const Constants = {
 //   analytic_id: uuid (not null)
 //   is_active: boolean (nullable, default: true)
 //   activated_at: timestamp with time zone (not null, default: now())
+//   trial_started_at: timestamp with time zone (nullable)
+//   trial_ends_at: timestamp with time zone (nullable)
+//   trial_event_limit: integer (nullable)
+//   trial_events_used: integer (nullable, default: 0)
 // Table: cameras
 //   id: uuid (not null, default: gen_random_uuid())
 //   organization_id: uuid (not null)
@@ -526,6 +553,7 @@ export const Constants = {
 //   connection_url: text (nullable)
 //   status: text (nullable, default: 'offline'::text)
 //   created_at: timestamp with time zone (not null, default: now())
+//   is_active: boolean (nullable, default: true)
 // Table: events
 //   id: uuid (not null, default: gen_random_uuid())
 //   camera_id: uuid (not null)
