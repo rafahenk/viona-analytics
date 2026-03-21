@@ -539,7 +539,7 @@ export const Constants = {
 //   Policy "Profiles DELETE" (DELETE, PERMISSIVE) roles={public}
 //     USING: ((organization_id = get_auth_user_organization_id()) AND is_admin())
 //   Policy "Profiles INSERT" (INSERT, PERMISSIVE) roles={public}
-//     WITH CHECK: ((id = auth.uid()) OR ((organization_id = get_auth_user_organization_id()) AND is_admin()))
+//     WITH CHECK: true
 //   Policy "Profiles SELECT" (SELECT, PERMISSIVE) roles={public}
 //     USING: ((id = auth.uid()) OR (organization_id = get_auth_user_organization_id()))
 //   Policy "Profiles UPDATE" (UPDATE, PERMISSIVE) roles={public}

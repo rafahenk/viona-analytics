@@ -36,7 +36,16 @@ export default function Register() {
       const { data: authData, error: authError } = await signUp(form.email, form.password, {
         data: { name: form.name },
       })
-      if (authError) throw authError
+
+      if (authError) {
+        if (authError.status === 429 || authError.message?.toLowerCase().includes('rate limit')) {
+          throw new Error(
+            'Limite de segurança atingido. Por favor, aguarde alguns minutos antes de tentar realizar um novo cadastro.',
+          )
+        }
+        throw authError
+      }
+
       if (!authData?.user) throw new Error('Não foi possível criar o usuário.')
 
       // Generate IDs client-side to avoid SELECT returning 0 rows immediately after INSERT due to RLS
