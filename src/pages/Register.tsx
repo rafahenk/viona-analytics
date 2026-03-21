@@ -39,63 +39,58 @@ export default function Register() {
       if (authError) throw authError
       if (!authData?.user) throw new Error('Não foi possível criar o usuário.')
 
-      const { data: org, error: orgError } = await supabase
-        .from('organizations')
-        .insert({
-          name: form.company,
-          cnpj: form.cnpj,
-          status: 'trial',
-        })
-        .select()
-        .single()
+      // Generate IDs client-side to avoid SELECT returning 0 rows immediately after INSERT due to RLS
+      const newOrgId = crypto.randomUUID()
+
+      const { error: orgError } = await supabase.from('organizations').insert({
+        id: newOrgId,
+        name: form.company,
+        cnpj: form.cnpj,
+        status: 'trial',
+      })
 
       if (orgError) throw orgError
 
       const { error: profileError } = await supabase.from('profiles').insert({
         id: authData.user.id,
-        organization_id: org.id,
+        organization_id: newOrgId,
         full_name: form.name,
         role: 'admin',
       })
+
       if (profileError) throw profileError
 
       // Seed initial data for demo purposes
-      const { data: cam } = await supabase
-        .from('cameras')
-        .insert({
-          organization_id: org.id,
-          name: 'Câmera Principal (Exemplo)',
-          status: 'online',
-          connection_url: 'rtsp://demo',
-        })
-        .select()
-        .single()
+      const newCamId = crypto.randomUUID()
+      const { error: camError } = await supabase.from('cameras').insert({
+        id: newCamId,
+        organization_id: newOrgId,
+        name: 'Câmera Principal (Exemplo)',
+        status: 'online',
+        connection_url: 'rtsp://demo',
+      })
 
-      if (cam) {
+      if (!camError) {
         const { data: catalog } = await supabase.from('analytics_catalog').select('*').limit(2)
         if (catalog && catalog.length > 0) {
           await supabase
             .from('camera_analytics_config')
-            .insert([{ camera_id: cam.id, analytic_id: catalog[0].id }])
-          await supabase
-            .from('usage_logs')
-            .insert([
-              {
-                organization_id: org.id,
-                camera_id: cam.id,
-                analytic_id: catalog[0].id,
-                amount: 5.5,
-              },
-            ])
-          await supabase
-            .from('events')
-            .insert([
-              {
-                camera_id: cam.id,
-                analytic_id: catalog[0].id,
-                thumbnail_url: 'https://img.usecurling.com/p/300/200?q=car',
-              },
-            ])
+            .insert([{ camera_id: newCamId, analytic_id: catalog[0].id }])
+          await supabase.from('usage_logs').insert([
+            {
+              organization_id: newOrgId,
+              camera_id: newCamId,
+              analytic_id: catalog[0].id,
+              amount: 5.5,
+            },
+          ])
+          await supabase.from('events').insert([
+            {
+              camera_id: newCamId,
+              analytic_id: catalog[0].id,
+              thumbnail_url: 'https://img.usecurling.com/p/300/200?q=car',
+            },
+          ])
         }
       }
 
