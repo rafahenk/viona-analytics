@@ -38,10 +38,17 @@ export default function Register() {
       })
 
       if (authError) {
-        if (authError.status === 429 || authError.message?.toLowerCase().includes('rate limit')) {
-          throw new Error(
-            'Limite de segurança atingido. Por favor, aguarde alguns minutos antes de tentar realizar um novo cadastro.',
-          )
+        if (
+          authError.status === 429 ||
+          authError.message?.toLowerCase().includes('rate limit') ||
+          (authError as any).code === 'over_email_send_rate_limit' ||
+          (authError as any).code === 429
+        ) {
+          toast.error('Limite de segurança atingido', {
+            description: 'Aguarde alguns minutos antes de tentar realizar um novo cadastro.',
+          })
+          setLoading(false)
+          return
         }
         throw authError
       }
@@ -109,7 +116,9 @@ export default function Register() {
       })
       navigate('/dashboard')
     } catch (error: any) {
-      toast.error('Erro ao criar conta', { description: error.message })
+      toast.error('Erro ao criar conta', {
+        description: error.message || 'Ocorreu um erro inesperado.',
+      })
     } finally {
       setLoading(false)
     }
