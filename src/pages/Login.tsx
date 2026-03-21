@@ -17,13 +17,50 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
   const [loginType, setLoginType] = useState<'gestor' | 'usuario'>('gestor')
+
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
+
+  const [errors, setErrors] = useState({ identifier: '', password: '' })
+
   const [needsConfirmation, setNeedsConfirmation] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
+  const handleInputChange = (field: 'identifier' | 'password', value: string) => {
+    if (field === 'identifier') setIdentifier(value)
+    if (field === 'password') setPassword(value)
+
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: '' }))
+    }
+    setErrorMsg('')
+    setNeedsConfirmation(false)
+  }
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    let hasError = false
+    const newErrors = { identifier: '', password: '' }
+
+    if (!identifier.trim()) {
+      newErrors.identifier = 'Campo obrigatório'
+      hasError = true
+    } else if (loginType === 'gestor' && !/\S+@\S+\.\S+/.test(identifier)) {
+      newErrors.identifier = 'E-mail inválido'
+      hasError = true
+    }
+
+    if (!password) {
+      newErrors.password = 'Campo obrigatório'
+      hasError = true
+    }
+
+    if (hasError) {
+      setErrors(newErrors)
+      return
+    }
+
     setLoading(true)
     setErrorMsg('')
     setNeedsConfirmation(false)
@@ -48,6 +85,10 @@ export default function Login() {
           setNeedsConfirmation(true)
         } else {
           setErrorMsg('Credenciais incorretas ou acesso bloqueado.')
+          setErrors({
+            identifier: 'Verifique suas credenciais',
+            password: 'Verifique suas credenciais',
+          })
         }
         setLoading(false)
         return
@@ -108,6 +149,7 @@ export default function Login() {
                 onClick={() => {
                   setLoginType('gestor')
                   setIdentifier('')
+                  setErrors({ identifier: '', password: '' })
                   setErrorMsg('')
                 }}
               >
@@ -118,6 +160,7 @@ export default function Login() {
                 onCheckedChange={(checked) => {
                   setLoginType(checked ? 'usuario' : 'gestor')
                   setIdentifier('')
+                  setErrors({ identifier: '', password: '' })
                   setErrorMsg('')
                 }}
               />
@@ -131,6 +174,7 @@ export default function Login() {
                 onClick={() => {
                   setLoginType('usuario')
                   setIdentifier('')
+                  setErrors({ identifier: '', password: '' })
                   setErrorMsg('')
                 }}
               >
@@ -168,27 +212,30 @@ export default function Login() {
               </Alert>
             )}
 
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleLogin} className="space-y-4" noValidate>
               <div className="space-y-2">
-                <Label htmlFor="identifier">
+                <Label htmlFor="identifier" className={errors.identifier ? 'text-destructive' : ''}>
                   {loginType === 'gestor' ? 'Email Corporativo' : 'Nome de Usuário'}
                 </Label>
                 <Input
                   id="identifier"
                   type={loginType === 'gestor' ? 'email' : 'text'}
-                  required
                   placeholder={loginType === 'gestor' ? 'gestor@empresa.com' : 'nomedeusuario'}
+                  className={
+                    errors.identifier ? 'border-destructive focus-visible:ring-destructive' : ''
+                  }
                   value={identifier}
-                  onChange={(e) => {
-                    setIdentifier(e.target.value)
-                    setErrorMsg('')
-                    setNeedsConfirmation(false)
-                  }}
+                  onChange={(e) => handleInputChange('identifier', e.target.value)}
                 />
+                {errors.identifier && (
+                  <p className="text-xs font-medium text-destructive">{errors.identifier}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Senha</Label>
+                  <Label htmlFor="password" className={errors.password ? 'text-destructive' : ''}>
+                    Senha
+                  </Label>
                   {loginType === 'gestor' && (
                     <a href="#" className="text-xs font-medium text-primary hover:underline">
                       Esqueceu a senha?
@@ -198,15 +245,17 @@ export default function Login() {
                 <Input
                   id="password"
                   type="password"
-                  required
+                  className={
+                    errors.password ? 'border-destructive focus-visible:ring-destructive' : ''
+                  }
                   value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value)
-                    setErrorMsg('')
-                  }}
+                  onChange={(e) => handleInputChange('password', e.target.value)}
                 />
+                {errors.password && (
+                  <p className="text-xs font-medium text-destructive">{errors.password}</p>
+                )}
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full mt-2" disabled={loading}>
                 {loading ? 'Entrando...' : 'Entrar'}
               </Button>
             </form>

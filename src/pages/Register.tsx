@@ -24,10 +24,42 @@ export default function Register() {
     confirm: '',
   })
 
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  const [termsAccepted, setTermsAccepted] = useState(false)
+
+  const handleInputChange = (field: string, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }))
+    if (formErrors[field]) {
+      setFormErrors((prev) => ({ ...prev, [field]: '' }))
+    }
+  }
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (form.password !== form.confirm) {
-      toast.error('As senhas não coincidem')
+
+    const newErrors: Record<string, string> = {}
+    if (!form.company.trim()) newErrors.company = 'Nome da empresa é obrigatório'
+    if (!form.cnpj.trim()) newErrors.cnpj = 'CNPJ é obrigatório'
+    if (!form.name.trim()) newErrors.name = 'Nome do responsável é obrigatório'
+    if (!form.email.trim()) {
+      newErrors.email = 'E-mail é obrigatório'
+    } else if (!/\S+@\S+\.\S+/.test(form.email)) {
+      newErrors.email = 'E-mail inválido'
+    }
+    if (!form.password) newErrors.password = 'Senha é obrigatória'
+    if (!form.confirm) {
+      newErrors.confirm = 'Confirme sua senha'
+    } else if (form.password !== form.confirm) {
+      newErrors.confirm = 'As senhas não coincidem'
+    }
+
+    if (!termsAccepted) {
+      toast.error('Você deve aceitar os termos e políticas de privacidade.')
+      return
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setFormErrors(newErrors)
       return
     }
 
@@ -57,6 +89,12 @@ export default function Register() {
           setLoading(false)
           return
         }
+
+        if (authError.message?.toLowerCase().includes('already registered')) {
+          setFormErrors((prev) => ({ ...prev, email: 'Este e-mail já está em uso' }))
+          throw new Error('Este e-mail já está em uso')
+        }
+
         throw authError
       }
 
@@ -74,7 +112,13 @@ export default function Register() {
         status: 'trial',
       })
 
-      if (orgError) throw orgError
+      if (orgError) {
+        if (orgError.code === '23505' && orgError.message.includes('organizations_cnpj_key')) {
+          setFormErrors((prev) => ({ ...prev, cnpj: 'CNPJ já cadastrado no sistema' }))
+          throw new Error('Este CNPJ já está cadastrado em nosso sistema.')
+        }
+        throw orgError
+      }
 
       const { error: profileError } = await supabase.from('profiles').insert({
         id: authData.user.id,
@@ -132,10 +176,6 @@ export default function Register() {
 
       let errorMsg = error.message || 'Ocorreu um erro inesperado. Tente novamente mais tarde.'
 
-      if (error.code === '23505' && error.message.includes('organizations_cnpj_key')) {
-        errorMsg = 'Este CNPJ já está cadastrado em nosso sistema.'
-      }
-
       toast.error('Erro ao criar conta', {
         description: errorMsg,
       })
@@ -164,75 +204,124 @@ export default function Register() {
             <CardDescription>Preencha os dados para configurar seu portal</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleRegister} className="space-y-4">
+            <form onSubmit={handleRegister} className="space-y-4" noValidate>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="company">Nome da Empresa</Label>
+                  <Label htmlFor="company" className={formErrors.company ? 'text-destructive' : ''}>
+                    Nome da Empresa
+                  </Label>
                   <Input
                     id="company"
                     placeholder="Ex: Acme Corp"
-                    required
+                    className={
+                      formErrors.company ? 'border-destructive focus-visible:ring-destructive' : ''
+                    }
                     value={form.company}
-                    onChange={(e) => setForm({ ...form, company: e.target.value })}
+                    onChange={(e) => handleInputChange('company', e.target.value)}
                   />
+                  {formErrors.company && (
+                    <p className="text-xs font-medium text-destructive">{formErrors.company}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="cnpj">CNPJ</Label>
+                  <Label htmlFor="cnpj" className={formErrors.cnpj ? 'text-destructive' : ''}>
+                    CNPJ
+                  </Label>
                   <Input
                     id="cnpj"
                     placeholder="00.000.000/0001-00"
-                    required
+                    className={
+                      formErrors.cnpj ? 'border-destructive focus-visible:ring-destructive' : ''
+                    }
                     value={form.cnpj}
-                    onChange={(e) => setForm({ ...form, cnpj: e.target.value })}
+                    onChange={(e) => handleInputChange('cnpj', e.target.value)}
                   />
+                  {formErrors.cnpj && (
+                    <p className="text-xs font-medium text-destructive">{formErrors.cnpj}</p>
+                  )}
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="name">Nome do Responsável</Label>
+                <Label htmlFor="name" className={formErrors.name ? 'text-destructive' : ''}>
+                  Nome do Responsável
+                </Label>
                 <Input
                   id="name"
                   placeholder="Seu nome completo"
-                  required
+                  className={
+                    formErrors.name ? 'border-destructive focus-visible:ring-destructive' : ''
+                  }
                   value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
                 />
+                {formErrors.name && (
+                  <p className="text-xs font-medium text-destructive">{formErrors.name}</p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email Corporativo</Label>
+                <Label htmlFor="email" className={formErrors.email ? 'text-destructive' : ''}>
+                  Email Corporativo
+                </Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="nome@empresa.com.br"
-                  required
+                  className={
+                    formErrors.email ? 'border-destructive focus-visible:ring-destructive' : ''
+                  }
                   value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
                 />
+                {formErrors.email && (
+                  <p className="text-xs font-medium text-destructive">{formErrors.email}</p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
+                  <Label
+                    htmlFor="password"
+                    className={formErrors.password ? 'text-destructive' : ''}
+                  >
+                    Senha
+                  </Label>
                   <Input
                     id="password"
                     type="password"
-                    required
+                    className={
+                      formErrors.password ? 'border-destructive focus-visible:ring-destructive' : ''
+                    }
                     value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
                   />
+                  {formErrors.password && (
+                    <p className="text-xs font-medium text-destructive">{formErrors.password}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirm">Confirmar Senha</Label>
+                  <Label htmlFor="confirm" className={formErrors.confirm ? 'text-destructive' : ''}>
+                    Confirmar Senha
+                  </Label>
                   <Input
                     id="confirm"
                     type="password"
-                    required
+                    className={
+                      formErrors.confirm ? 'border-destructive focus-visible:ring-destructive' : ''
+                    }
                     value={form.confirm}
-                    onChange={(e) => setForm({ ...form, confirm: e.target.value })}
+                    onChange={(e) => handleInputChange('confirm', e.target.value)}
                   />
+                  {formErrors.confirm && (
+                    <p className="text-xs font-medium text-destructive">{formErrors.confirm}</p>
+                  )}
                 </div>
               </div>
 
               <div className="flex items-start space-x-2 pt-2">
-                <Checkbox id="terms" required />
+                <Checkbox
+                  id="terms"
+                  checked={termsAccepted}
+                  onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
+                />
                 <Label
                   htmlFor="terms"
                   className="text-xs font-normal leading-relaxed text-muted-foreground"
