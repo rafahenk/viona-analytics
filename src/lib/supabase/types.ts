@@ -39,6 +39,44 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'audit_logs_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       camera_analytics_config: {
         Row: {
           activated_at: string
@@ -162,6 +200,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          plan_id: string | null
           status: string | null
           trial_until: string | null
         }
@@ -171,6 +210,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          plan_id?: string | null
           status?: string | null
           trial_until?: string | null
         }
@@ -180,8 +220,44 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          plan_id?: string | null
           status?: string | null
           trial_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'organizations_plan_id_fkey'
+            columns: ['plan_id']
+            isOneToOne: false
+            referencedRelation: 'plans'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      plans: {
+        Row: {
+          created_at: string
+          description: string | null
+          features: Json | null
+          id: string
+          name: string
+          price: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          features?: Json | null
+          id?: string
+          name: string
+          price?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          features?: Json | null
+          id?: string
+          name?: string
+          price?: number
         }
         Relationships: []
       }
@@ -190,6 +266,7 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          is_super_admin: boolean | null
           organization_id: string | null
           role: string | null
         }
@@ -197,6 +274,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id: string
+          is_super_admin?: boolean | null
           organization_id?: string | null
           role?: string | null
         }
@@ -204,6 +282,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          is_super_admin?: boolean | null
           organization_id?: string | null
           role?: string | null
         }
@@ -273,6 +352,7 @@ export type Database = {
     Functions: {
       get_auth_user_organization_id: { Args: never; Returns: string }
       is_admin: { Args: never; Returns: boolean }
+      is_super_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
@@ -422,6 +502,14 @@ export const Constants = {
 //   price_model: text (nullable)
 //   unit_price: numeric (not null, default: 0)
 //   created_at: timestamp with time zone (not null, default: now())
+// Table: audit_logs
+//   id: uuid (not null, default: gen_random_uuid())
+//   user_id: uuid (nullable)
+//   action: text (not null)
+//   entity_type: text (not null)
+//   entity_id: uuid (nullable)
+//   details: jsonb (nullable, default: '{}'::jsonb)
+//   created_at: timestamp with time zone (not null, default: now())
 // Table: camera_analytics_config
 //   id: uuid (not null, default: gen_random_uuid())
 //   camera_id: uuid (not null)
@@ -450,12 +538,21 @@ export const Constants = {
 //   status: text (nullable, default: 'trial'::text)
 //   trial_until: timestamp with time zone (nullable)
 //   created_at: timestamp with time zone (not null, default: now())
+//   plan_id: uuid (nullable)
+// Table: plans
+//   id: uuid (not null, default: gen_random_uuid())
+//   name: text (not null)
+//   description: text (nullable)
+//   price: numeric (not null, default: 0)
+//   features: jsonb (nullable, default: '{}'::jsonb)
+//   created_at: timestamp with time zone (not null, default: now())
 // Table: profiles
 //   id: uuid (not null)
 //   organization_id: uuid (nullable)
 //   full_name: text (nullable)
 //   role: text (nullable, default: 'viewer'::text)
 //   created_at: timestamp with time zone (not null, default: now())
+//   is_super_admin: boolean (nullable, default: false)
 // Table: usage_logs
 //   id: uuid (not null, default: gen_random_uuid())
 //   organization_id: uuid (not null)
@@ -469,6 +566,9 @@ export const Constants = {
 //   PRIMARY KEY analytics_catalog_pkey: PRIMARY KEY (id)
 //   CHECK analytics_catalog_price_model_check: CHECK ((price_model = ANY (ARRAY['per_event'::text, 'monthly'::text])))
 //   UNIQUE analytics_catalog_slug_key: UNIQUE (slug)
+// Table: audit_logs
+//   PRIMARY KEY audit_logs_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY audit_logs_user_id_fkey: FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE SET NULL
 // Table: camera_analytics_config
 //   FOREIGN KEY camera_analytics_config_analytic_id_fkey: FOREIGN KEY (analytic_id) REFERENCES analytics_catalog(id) ON DELETE CASCADE
 //   UNIQUE camera_analytics_config_camera_id_analytic_id_key: UNIQUE (camera_id, analytic_id)
@@ -485,7 +585,10 @@ export const Constants = {
 // Table: organizations
 //   UNIQUE organizations_cnpj_key: UNIQUE (cnpj)
 //   PRIMARY KEY organizations_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY organizations_plan_id_fkey: FOREIGN KEY (plan_id) REFERENCES plans(id) ON DELETE SET NULL
 //   CHECK organizations_status_check: CHECK ((status = ANY (ARRAY['active'::text, 'trial'::text, 'past_due'::text, 'canceled'::text])))
+// Table: plans
+//   PRIMARY KEY plans_pkey: PRIMARY KEY (id)
 // Table: profiles
 //   FOREIGN KEY profiles_id_fkey: FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
 //   FOREIGN KEY profiles_organization_id_fkey: FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
@@ -501,6 +604,11 @@ export const Constants = {
 // Table: analytics_catalog
 //   Policy "Analytics Catalog SELECT" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: true
+// Table: audit_logs
+//   Policy "AuditLogs INSERT" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: (auth.uid() IS NOT NULL)
+//   Policy "AuditLogs SELECT Admin" (SELECT, PERMISSIVE) roles={public}
+//     USING: is_super_admin()
 // Table: camera_analytics_config
 //   Policy "CameraAnalyticsConfig DELETE" (DELETE, PERMISSIVE) roles={public}
 //     USING: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id = get_auth_user_organization_id())))
@@ -532,18 +640,23 @@ export const Constants = {
 //   Policy "Organizations INSERT" (INSERT, PERMISSIVE) roles={public}
 //     WITH CHECK: true
 //   Policy "Organizations SELECT" (SELECT, PERMISSIVE) roles={public}
-//     USING: (id = get_auth_user_organization_id())
+//     USING: ((id IN ( SELECT profiles.organization_id    FROM profiles   WHERE (profiles.id = auth.uid()))) OR is_super_admin())
 //   Policy "Organizations UPDATE" (UPDATE, PERMISSIVE) roles={public}
-//     USING: ((id = get_auth_user_organization_id()) AND is_admin())
+//     USING: ((id IN ( SELECT profiles.organization_id    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text)))) OR is_super_admin())
+// Table: plans
+//   Policy "Plans ALL Admin" (ALL, PERMISSIVE) roles={public}
+//     USING: is_super_admin()
+//   Policy "Plans SELECT" (SELECT, PERMISSIVE) roles={public}
+//     USING: true
 // Table: profiles
 //   Policy "Profiles DELETE" (DELETE, PERMISSIVE) roles={public}
 //     USING: ((organization_id = get_auth_user_organization_id()) AND is_admin())
 //   Policy "Profiles INSERT" (INSERT, PERMISSIVE) roles={public}
 //     WITH CHECK: true
 //   Policy "Profiles SELECT" (SELECT, PERMISSIVE) roles={public}
-//     USING: ((id = auth.uid()) OR (organization_id = get_auth_user_organization_id()))
+//     USING: ((organization_id IN ( SELECT profiles_1.organization_id    FROM profiles profiles_1   WHERE (profiles_1.id = auth.uid()))) OR (id = auth.uid()) OR is_super_admin())
 //   Policy "Profiles UPDATE" (UPDATE, PERMISSIVE) roles={public}
-//     USING: ((id = auth.uid()) OR ((organization_id = get_auth_user_organization_id()) AND is_admin()))
+//     USING: ((id = auth.uid()) OR (organization_id IN ( SELECT profiles_1.organization_id    FROM profiles profiles_1   WHERE ((profiles_1.id = auth.uid()) AND (profiles_1.role = 'admin'::text)))) OR is_super_admin())
 // Table: usage_logs
 //   Policy "UsageLogs DELETE" (DELETE, PERMISSIVE) roles={public}
 //     USING: (organization_id = get_auth_user_organization_id())
@@ -573,6 +686,16 @@ export const Constants = {
 //    SET search_path TO ''
 //   AS $function$
 //     SELECT role = 'admin' FROM public.profiles WHERE id = auth.uid() LIMIT 1;
+//   $function$
+//
+// FUNCTION is_super_admin()
+//   CREATE OR REPLACE FUNCTION public.is_super_admin()
+//    RETURNS boolean
+//    LANGUAGE sql
+//    SECURITY DEFINER
+//    SET search_path TO ''
+//   AS $function$
+//     SELECT is_super_admin FROM public.profiles WHERE id = auth.uid() LIMIT 1;
 //   $function$
 //
 
