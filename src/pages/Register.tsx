@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,6 +14,25 @@ export default function Register() {
   const navigate = useNavigate()
   const { signUp, signOut } = useAuth()
   const [loading, setLoading] = useState(false)
+  const [cooldown, setCooldown] = useState(0)
+  const [remainingTime, setRemainingTime] = useState(0)
+
+  useEffect(() => {
+    if (cooldown === 0) return
+
+    const timer = setInterval(() => {
+      const remaining = Math.ceil((cooldown - Date.now()) / 1000)
+      if (remaining <= 0) {
+        setCooldown(0)
+        setRemainingTime(0)
+        clearInterval(timer)
+      } else {
+        setRemainingTime(remaining)
+      }
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [cooldown])
 
   const [form, setForm] = useState({
     company: '',
@@ -42,6 +61,13 @@ export default function Register() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (cooldown > Date.now()) {
+      toast.error('Muitas tentativas', {
+        description: `Por favor, aguarde ${remainingTime} segundos antes de tentar novamente.`,
+      })
+      return
+    }
 
     const newErrors: Record<string, string> = {}
     if (!form.company.trim()) newErrors.company = 'Nome da empresa é obrigatório'
@@ -88,9 +114,11 @@ export default function Register() {
           authError.message?.toLowerCase().includes('after')
 
         if (isRateLimit) {
+          setCooldown(Date.now() + 60000)
+          setRemainingTime(60)
           toast.error('Limite de segurança atingido', {
             description:
-              'Por favor, aguarde cerca de 1 minuto antes de tentar realizar um novo cadastro.',
+              'Muitas requisições. Por favor, aguarde cerca de 1 minuto antes de tentar realizar um novo cadastro.',
           })
           setLoading(false)
           return
@@ -209,6 +237,7 @@ export default function Register() {
                     }
                     value={form.company}
                     onChange={(e) => handleInputChange('company', e.target.value)}
+                    disabled={cooldown > 0}
                   />
                   {formErrors.company && (
                     <p className="text-xs font-medium text-destructive">{formErrors.company}</p>
@@ -226,6 +255,7 @@ export default function Register() {
                     }
                     value={form.cnpj}
                     onChange={(e) => handleInputChange('cnpj', e.target.value)}
+                    disabled={cooldown > 0}
                   />
                   {formErrors.cnpj && (
                     <p className="text-xs font-medium text-destructive">{formErrors.cnpj}</p>
@@ -244,6 +274,7 @@ export default function Register() {
                   }
                   value={form.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
+                  disabled={cooldown > 0}
                 />
                 {formErrors.name && (
                   <p className="text-xs font-medium text-destructive">{formErrors.name}</p>
@@ -262,6 +293,7 @@ export default function Register() {
                   }
                   value={form.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
+                  disabled={cooldown > 0}
                 />
                 {formErrors.email && (
                   <p className="text-xs font-medium text-destructive">{formErrors.email}</p>
@@ -292,6 +324,7 @@ export default function Register() {
                     }
                     value={form.password}
                     onChange={(e) => handleInputChange('password', e.target.value)}
+                    disabled={cooldown > 0}
                   />
                   {formErrors.password && (
                     <p className="text-xs font-medium text-destructive">{formErrors.password}</p>
@@ -314,6 +347,7 @@ export default function Register() {
                     }
                     value={form.confirm}
                     onChange={(e) => handleInputChange('confirm', e.target.value)}
+                    disabled={cooldown > 0}
                   />
                   {formErrors.confirm && (
                     <p className="text-xs font-medium text-destructive">{formErrors.confirm}</p>
@@ -326,6 +360,7 @@ export default function Register() {
                   id="terms"
                   checked={termsAccepted}
                   onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
+                  disabled={cooldown > 0}
                 />
                 <Label
                   htmlFor="terms"
@@ -335,8 +370,12 @@ export default function Register() {
                 </Label>
               </div>
 
-              <Button type="submit" className="w-full mt-4" disabled={loading}>
-                {loading ? 'Criando conta...' : 'Criar conta agora'}
+              <Button type="submit" className="w-full mt-4" disabled={loading || cooldown > 0}>
+                {loading
+                  ? 'Criando conta...'
+                  : cooldown > 0
+                    ? `Aguarde ${remainingTime}s`
+                    : 'Criar conta agora'}
               </Button>
             </form>
           </CardContent>
