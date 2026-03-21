@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { AddCameraDialog } from '@/components/cameras/AddCameraDialog'
 import { Input } from '@/components/ui/input'
 import { Search, Filter, Settings2, Trash2, Camera as CamIcon } from 'lucide-react'
@@ -19,31 +19,53 @@ import { toast } from 'sonner'
 
 export default function Cameras() {
   const navigate = useNavigate()
-  const { profile } = useProfile()
+  const { profile, loading: profileLoading } = useProfile()
   const [cameras, setCameras] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   const loadCameras = async () => {
-    if (!profile?.organization_id) return
-    const { data } = await supabase
-      .from('cameras')
-      .select('*, camera_analytics_config(id)')
-      .order('created_at', { ascending: false })
+    if (!profile?.organization_id) {
+      setLoading(false)
+      return
+    }
 
-    setCameras(data || [])
-    setLoading(false)
+    try {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('cameras')
+        .select('*, camera_analytics_config(id)')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setCameras(data || [])
+    } catch (error: any) {
+      console.error('Error fetching cameras:', error)
+      toast.error('Erro ao carregar câmeras')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
-    loadCameras()
-  }, [profile])
+    if (!profileLoading) {
+      loadCameras()
+    }
+  }, [profile, profileLoading])
 
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja remover esta câmera?')) return
-    await supabase.from('cameras').delete().eq('id', id)
-    toast.success('Câmera removida com sucesso.')
-    loadCameras()
+    try {
+      const { error } = await supabase.from('cameras').delete().eq('id', id)
+      if (error) throw error
+      toast.success('Câmera removida com sucesso.')
+      loadCameras()
+    } catch (error: any) {
+      console.error('Error deleting camera:', error)
+      toast.error('Erro ao remover câmera')
+    }
   }
+
+  const isLoading = loading || profileLoading
 
   return (
     <div className="flex flex-col gap-6">
@@ -79,9 +101,9 @@ export default function Cameras() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
+            {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                   Carregando...
                 </TableCell>
               </TableRow>
@@ -106,7 +128,7 @@ export default function Cameras() {
                     <div className="font-medium text-foreground">{camera.name}</div>
                     <div
                       className="text-xs text-muted-foreground truncate max-w-[200px]"
-                      title={camera.connection_url}
+                      title={camera.connection_url || ''}
                     >
                       {camera.connection_url || 'Sem URL de conexão'}
                     </div>
