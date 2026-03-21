@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AddCameraDialog } from '@/components/cameras/AddCameraDialog'
 import { Input } from '@/components/ui/input'
-import { Search, Filter, Settings2, Trash2, Camera as CamIcon } from 'lucide-react'
+import { Search, Filter, Settings2, Trash2, Camera as CamIcon, Info } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -22,6 +22,7 @@ export default function Cameras() {
   const { profile, loading: profileLoading } = useProfile()
   const [cameras, setCameras] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
 
   const loadCameras = async () => {
     if (!profile?.organization_id) {
@@ -66,6 +67,11 @@ export default function Cameras() {
   }
 
   const isLoading = loading || profileLoading
+  const filteredCameras = cameras.filter(
+    (c) =>
+      c.name.toLowerCase().includes(search.toLowerCase()) ||
+      (c.connection_url && c.connection_url.toLowerCase().includes(search.toLowerCase())),
+  )
 
   return (
     <div className="flex flex-col gap-6">
@@ -82,7 +88,12 @@ export default function Cameras() {
       <div className="flex items-center gap-2">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por nome ou URL..." className="pl-9 bg-card" />
+          <Input
+            placeholder="Buscar por nome ou URL..."
+            className="pl-9 bg-card"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
         <Button variant="outline" size="icon">
           <Filter className="h-4 w-4" />
@@ -103,18 +114,24 @@ export default function Cameras() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  Carregando...
+                <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    Carregando câmeras...
+                  </div>
                 </TableCell>
               </TableRow>
-            ) : cameras.length === 0 ? (
+            ) : filteredCameras.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  Nenhuma câmera cadastrada.
+                <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                  <div className="flex flex-col items-center gap-2">
+                    <Info className="h-5 w-5 opacity-50" />
+                    Nenhuma câmera encontrada.
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
-              cameras.map((camera) => (
+              filteredCameras.map((camera) => (
                 <TableRow key={camera.id} className="hover:bg-muted/30">
                   <TableCell>
                     <div className="h-10 w-16 rounded overflow-hidden bg-muted flex items-center justify-center relative border border-border/50">

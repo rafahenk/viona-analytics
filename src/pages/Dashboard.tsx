@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Activity, Camera, Zap, DollarSign, Settings2, Camera as CamIcon } from 'lucide-react'
+import { Activity, Camera, Zap, DollarSign, Settings2, Camera as CamIcon, Info } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -9,15 +9,22 @@ import { supabase } from '@/lib/supabase/client'
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const { profile } = useProfile()
+  const { profile, loading: profileLoading } = useProfile()
 
   const [stats, setStats] = useState({ cameras: 0, analytics: 0, events: 0, cost: 0 })
   const [cameras, setCameras] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loadingData, setLoadingData] = useState(true)
 
   useEffect(() => {
-    if (!profile?.organization_id) return
+    if (profileLoading) return
+
+    if (!profile?.organization_id) {
+      setLoadingData(false)
+      return
+    }
+
     const fetchStats = async () => {
+      setLoadingData(true)
       const [{ data: cams }, { count: evCount }, { data: usage }] = await Promise.all([
         supabase.from('cameras').select('*, camera_analytics_config(id)'),
         supabase.from('events').select('*', { count: 'exact', head: true }),
@@ -38,10 +45,12 @@ export default function Dashboard() {
         events: evCount || 0,
         cost: totalCost,
       })
-      setLoading(false)
+      setLoadingData(false)
     }
     fetchStats()
-  }, [profile])
+  }, [profile, profileLoading])
+
+  const isLoading = profileLoading || loadingData
 
   return (
     <div className="flex flex-col gap-6 h-[calc(100vh-8rem)]">
@@ -53,7 +62,7 @@ export default function Dashboard() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Câmeras Cadastradas</p>
-              <p className="text-2xl font-bold">{loading ? '-' : stats.cameras}</p>
+              <p className="text-2xl font-bold">{isLoading ? '-' : stats.cameras}</p>
             </div>
           </CardContent>
         </Card>
@@ -64,7 +73,7 @@ export default function Dashboard() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Analíticos Ativos</p>
-              <p className="text-2xl font-bold">{loading ? '-' : stats.analytics}</p>
+              <p className="text-2xl font-bold">{isLoading ? '-' : stats.analytics}</p>
             </div>
           </CardContent>
         </Card>
@@ -75,7 +84,7 @@ export default function Dashboard() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Eventos Gerados</p>
-              <p className="text-2xl font-bold text-amber-500">{loading ? '-' : stats.events}</p>
+              <p className="text-2xl font-bold text-amber-500">{isLoading ? '-' : stats.events}</p>
             </div>
           </CardContent>
         </Card>
@@ -87,7 +96,7 @@ export default function Dashboard() {
             <div>
               <p className="text-sm text-muted-foreground">Consumo Atual (R$)</p>
               <p className="text-2xl font-bold text-emerald-500">
-                {loading ? '-' : `R$ ${stats.cost.toFixed(2).replace('.', ',')}`}
+                {isLoading ? '-' : `R$ ${stats.cost.toFixed(2).replace('.', ',')}`}
               </p>
             </div>
           </CardContent>
@@ -104,10 +113,14 @@ export default function Dashboard() {
           </div>
 
           <div className="flex-1 overflow-y-auto pr-2 pb-4 scrollbar-thin space-y-3">
-            {loading ? (
-              <div className="text-center text-muted-foreground py-8">Carregando câmeras...</div>
+            {isLoading ? (
+              <div className="text-center text-muted-foreground py-8 flex flex-col items-center gap-2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                Carregando câmeras...
+              </div>
             ) : cameras.length === 0 ? (
-              <div className="text-center p-8 border border-dashed rounded-xl border-border/50 text-muted-foreground">
+              <div className="text-center p-8 border border-dashed rounded-xl border-border/50 text-muted-foreground flex flex-col items-center gap-2">
+                <Info className="h-5 w-5 opacity-50" />
                 <p>Nenhuma câmera configurada ainda.</p>
                 <Button variant="link" asChild className="mt-2">
                   <Link to="/cameras">Adicionar agora</Link>

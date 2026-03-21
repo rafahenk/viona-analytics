@@ -20,19 +20,24 @@ import { useProfile } from '@/hooks/use-profile'
 import { supabase } from '@/lib/supabase/client'
 
 export default function Billing() {
-  const { profile } = useProfile()
+  const { profile, loading: profileLoading } = useProfile()
   const [totalCost, setTotalCost] = useState(0)
   const [cameraTotals, setCameraTotals] = useState<Record<string, number>>({})
   const [analyticTotals, setAnalyticTotals] = useState<Record<string, number>>({})
   const [chartData, setChartData] = useState<any[]>([])
   const [chartConfig, setChartConfig] = useState<ChartConfig>({})
-  const [loading, setLoading] = useState(true)
+  const [loadingData, setLoadingData] = useState(true)
 
   useEffect(() => {
-    if (!profile?.organization_id) return
+    if (profileLoading) return
+
+    if (!profile?.organization_id) {
+      setLoadingData(false)
+      return
+    }
 
     const fetchUsage = async () => {
-      setLoading(true)
+      setLoadingData(true)
       const { data, error } = await supabase
         .from('usage_logs')
         .select('amount, timestamp, cameras(name), analytics_catalog(name, slug)')
@@ -41,7 +46,7 @@ export default function Billing() {
 
       if (error) {
         console.error('Error fetching usage:', error)
-        setLoading(false)
+        setLoadingData(false)
         return
       }
 
@@ -85,11 +90,13 @@ export default function Billing() {
       setAnalyticTotals(aTotals)
       setChartData(newChartData)
       setChartConfig(newChartConfig)
-      setLoading(false)
+      setLoadingData(false)
     }
 
     fetchUsage()
-  }, [profile?.organization_id])
+  }, [profile, profileLoading])
+
+  const isLoading = profileLoading || loadingData
 
   return (
     <div className="max-w-6xl mx-auto flex flex-col gap-8">
@@ -112,7 +119,7 @@ export default function Billing() {
           <CardContent>
             <div className="flex items-baseline gap-1 mt-2">
               <span className="text-4xl font-extrabold text-primary">
-                {loading ? '...' : `R$ ${totalCost.toFixed(2).replace('.', ',')}`}
+                {isLoading ? '...' : `R$ ${totalCost.toFixed(2).replace('.', ',')}`}
               </span>
             </div>
             <div className="mt-4 flex gap-2">
@@ -126,8 +133,9 @@ export default function Billing() {
             <CardTitle className="text-lg">Evolução do Consumo</CardTitle>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="h-[140px] w-full flex items-center justify-center text-sm text-muted-foreground">
+            {isLoading ? (
+              <div className="h-[140px] w-full flex flex-col items-center justify-center text-sm text-muted-foreground gap-2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                 Carregando dados...
               </div>
             ) : chartData.length === 0 ? (
@@ -181,16 +189,22 @@ export default function Billing() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
+                {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={2} className="text-center text-muted-foreground py-6">
-                      Carregando...
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                        Carregando...
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : Object.entries(cameraTotals).length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={2} className="text-center text-muted-foreground py-6">
-                      Sem consumo
+                      <div className="flex flex-col items-center gap-1">
+                        <Info className="h-4 w-4 opacity-50" />
+                        Sem consumo
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -221,16 +235,22 @@ export default function Billing() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
+                {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={2} className="text-center text-muted-foreground py-6">
-                      Carregando...
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                        Carregando...
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : Object.entries(analyticTotals).length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={2} className="text-center text-muted-foreground py-6">
-                      Sem consumo
+                      <div className="flex flex-col items-center gap-1">
+                        <Info className="h-4 w-4 opacity-50" />
+                        Sem consumo
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (

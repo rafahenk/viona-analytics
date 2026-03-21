@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Search, Calendar, Filter, Download } from 'lucide-react'
+import { Search, Calendar, Filter, Download, Info } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useProfile } from '@/hooks/use-profile'
@@ -16,7 +16,7 @@ export default function Events() {
   useEffect(() => {
     if (profileLoading) return
 
-    if (!profile) {
+    if (!profile?.organization_id) {
       setLoadingEvents(false)
       return
     }
@@ -89,9 +89,15 @@ export default function Events() {
 
       <div className="flex-1 overflow-y-auto pr-2 pb-4 scrollbar-thin">
         {isLoading ? (
-          <div className="text-center py-10 text-muted-foreground">Carregando eventos...</div>
+          <div className="text-center py-10 text-muted-foreground flex flex-col items-center gap-2">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            Carregando eventos...
+          </div>
         ) : filteredEvents.length === 0 ? (
-          <div className="text-center py-10 text-muted-foreground">Nenhum evento recebido.</div>
+          <div className="text-center py-10 text-muted-foreground flex flex-col items-center gap-2">
+            <Info className="h-5 w-5 opacity-50" />
+            Nenhum evento recebido.
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredEvents.map((event, i) => (
