@@ -1,4 +1,4 @@
-DO $
+DO $$
 DECLARE
   new_user_id uuid;
   new_org_id uuid;
@@ -65,4 +65,4 @@ BEGIN
       END IF;
     END IF;
   END LOOP;
-END $;
+END $$;
