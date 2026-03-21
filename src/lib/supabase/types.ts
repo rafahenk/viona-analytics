@@ -271,7 +271,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_auth_user_organization_id: { Args: never; Returns: string }
+      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
@@ -502,56 +503,78 @@ export const Constants = {
 //     USING: true
 // Table: camera_analytics_config
 //   Policy "CameraAnalyticsConfig DELETE" (DELETE, PERMISSIVE) roles={public}
-//     USING: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id IN ( SELECT profiles.organization_id            FROM profiles           WHERE (profiles.id = auth.uid())))))
+//     USING: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id = get_auth_user_organization_id())))
 //   Policy "CameraAnalyticsConfig INSERT" (INSERT, PERMISSIVE) roles={public}
-//     WITH CHECK: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id IN ( SELECT profiles.organization_id            FROM profiles           WHERE (profiles.id = auth.uid())))))
+//     WITH CHECK: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id = get_auth_user_organization_id())))
 //   Policy "CameraAnalyticsConfig SELECT" (SELECT, PERMISSIVE) roles={public}
-//     USING: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id IN ( SELECT profiles.organization_id            FROM profiles           WHERE (profiles.id = auth.uid())))))
+//     USING: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id = get_auth_user_organization_id())))
 //   Policy "CameraAnalyticsConfig UPDATE" (UPDATE, PERMISSIVE) roles={public}
-//     USING: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id IN ( SELECT profiles.organization_id            FROM profiles           WHERE (profiles.id = auth.uid())))))
+//     USING: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id = get_auth_user_organization_id())))
 // Table: cameras
 //   Policy "Cameras DELETE" (DELETE, PERMISSIVE) roles={public}
-//     USING: (organization_id IN ( SELECT profiles.organization_id    FROM profiles   WHERE (profiles.id = auth.uid())))
+//     USING: (organization_id = get_auth_user_organization_id())
 //   Policy "Cameras INSERT" (INSERT, PERMISSIVE) roles={public}
-//     WITH CHECK: (organization_id IN ( SELECT profiles.organization_id    FROM profiles   WHERE (profiles.id = auth.uid())))
+//     WITH CHECK: (organization_id = get_auth_user_organization_id())
 //   Policy "Cameras SELECT" (SELECT, PERMISSIVE) roles={public}
-//     USING: (organization_id IN ( SELECT profiles.organization_id    FROM profiles   WHERE (profiles.id = auth.uid())))
+//     USING: (organization_id = get_auth_user_organization_id())
 //   Policy "Cameras UPDATE" (UPDATE, PERMISSIVE) roles={public}
-//     USING: (organization_id IN ( SELECT profiles.organization_id    FROM profiles   WHERE (profiles.id = auth.uid())))
+//     USING: (organization_id = get_auth_user_organization_id())
 // Table: events
 //   Policy "Events DELETE" (DELETE, PERMISSIVE) roles={public}
-//     USING: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id IN ( SELECT profiles.organization_id            FROM profiles           WHERE (profiles.id = auth.uid())))))
+//     USING: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id = get_auth_user_organization_id())))
 //   Policy "Events INSERT" (INSERT, PERMISSIVE) roles={public}
-//     WITH CHECK: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id IN ( SELECT profiles.organization_id            FROM profiles           WHERE (profiles.id = auth.uid())))))
+//     WITH CHECK: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id = get_auth_user_organization_id())))
 //   Policy "Events SELECT" (SELECT, PERMISSIVE) roles={public}
-//     USING: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id IN ( SELECT profiles.organization_id            FROM profiles           WHERE (profiles.id = auth.uid())))))
+//     USING: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id = get_auth_user_organization_id())))
 //   Policy "Events UPDATE" (UPDATE, PERMISSIVE) roles={public}
-//     USING: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id IN ( SELECT profiles.organization_id            FROM profiles           WHERE (profiles.id = auth.uid())))))
+//     USING: (camera_id IN ( SELECT cameras.id    FROM cameras   WHERE (cameras.organization_id = get_auth_user_organization_id())))
 // Table: organizations
 //   Policy "Organizations INSERT" (INSERT, PERMISSIVE) roles={public}
 //     WITH CHECK: true
 //   Policy "Organizations SELECT" (SELECT, PERMISSIVE) roles={public}
-//     USING: (id IN ( SELECT profiles.organization_id    FROM profiles   WHERE (profiles.id = auth.uid())))
+//     USING: (id = get_auth_user_organization_id())
 //   Policy "Organizations UPDATE" (UPDATE, PERMISSIVE) roles={public}
-//     USING: (id IN ( SELECT profiles.organization_id    FROM profiles   WHERE ((profiles.id = auth.uid()) AND (profiles.role = 'admin'::text))))
+//     USING: ((id = get_auth_user_organization_id()) AND is_admin())
 // Table: profiles
 //   Policy "Profiles DELETE" (DELETE, PERMISSIVE) roles={public}
-//     USING: (organization_id IN ( SELECT profiles_1.organization_id    FROM profiles profiles_1   WHERE ((profiles_1.id = auth.uid()) AND (profiles_1.role = 'admin'::text))))
+//     USING: ((organization_id = get_auth_user_organization_id()) AND is_admin())
 //   Policy "Profiles INSERT" (INSERT, PERMISSIVE) roles={public}
-//     WITH CHECK: ((id = auth.uid()) OR (organization_id IN ( SELECT profiles_1.organization_id    FROM profiles profiles_1   WHERE ((profiles_1.id = auth.uid()) AND (profiles_1.role = 'admin'::text)))))
+//     WITH CHECK: ((id = auth.uid()) OR ((organization_id = get_auth_user_organization_id()) AND is_admin()))
 //   Policy "Profiles SELECT" (SELECT, PERMISSIVE) roles={public}
-//     USING: ((organization_id IN ( SELECT profiles_1.organization_id    FROM profiles profiles_1   WHERE (profiles_1.id = auth.uid()))) OR (id = auth.uid()))
+//     USING: ((id = auth.uid()) OR (organization_id = get_auth_user_organization_id()))
 //   Policy "Profiles UPDATE" (UPDATE, PERMISSIVE) roles={public}
-//     USING: ((id = auth.uid()) OR (organization_id IN ( SELECT profiles_1.organization_id    FROM profiles profiles_1   WHERE ((profiles_1.id = auth.uid()) AND (profiles_1.role = 'admin'::text)))))
+//     USING: ((id = auth.uid()) OR ((organization_id = get_auth_user_organization_id()) AND is_admin()))
 // Table: usage_logs
 //   Policy "UsageLogs DELETE" (DELETE, PERMISSIVE) roles={public}
-//     USING: (organization_id IN ( SELECT profiles.organization_id    FROM profiles   WHERE (profiles.id = auth.uid())))
+//     USING: (organization_id = get_auth_user_organization_id())
 //   Policy "UsageLogs INSERT" (INSERT, PERMISSIVE) roles={public}
-//     WITH CHECK: (organization_id IN ( SELECT profiles.organization_id    FROM profiles   WHERE (profiles.id = auth.uid())))
+//     WITH CHECK: (organization_id = get_auth_user_organization_id())
 //   Policy "UsageLogs SELECT" (SELECT, PERMISSIVE) roles={public}
-//     USING: (organization_id IN ( SELECT profiles.organization_id    FROM profiles   WHERE (profiles.id = auth.uid())))
+//     USING: (organization_id = get_auth_user_organization_id())
 //   Policy "UsageLogs UPDATE" (UPDATE, PERMISSIVE) roles={public}
-//     USING: (organization_id IN ( SELECT profiles.organization_id    FROM profiles   WHERE (profiles.id = auth.uid())))
+//     USING: (organization_id = get_auth_user_organization_id())
+
+// --- DATABASE FUNCTIONS ---
+// FUNCTION get_auth_user_organization_id()
+//   CREATE OR REPLACE FUNCTION public.get_auth_user_organization_id()
+//    RETURNS uuid
+//    LANGUAGE sql
+//    SECURITY DEFINER
+//    SET search_path TO ''
+//   AS $function$
+//     SELECT organization_id FROM public.profiles WHERE id = auth.uid() LIMIT 1;
+//   $function$
+//
+// FUNCTION is_admin()
+//   CREATE OR REPLACE FUNCTION public.is_admin()
+//    RETURNS boolean
+//    LANGUAGE sql
+//    SECURITY DEFINER
+//    SET search_path TO ''
+//   AS $function$
+//     SELECT role = 'admin' FROM public.profiles WHERE id = auth.uid() LIMIT 1;
+//   $function$
+//
 
 // --- INDEXES ---
 // Table: analytics_catalog
