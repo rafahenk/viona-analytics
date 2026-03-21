@@ -6,8 +6,8 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts'
-import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'
-import { AlertTriangle, Zap } from 'lucide-react'
+import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
+import { AlertTriangle, Zap, Info } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -19,61 +19,84 @@ import {
 import { useProfile } from '@/hooks/use-profile'
 import { supabase } from '@/lib/supabase/client'
 
-// Static chart data since simulating daily breakdown is complex for a demo
-const chartData = [
-  { day: '01', lpr: 1.2, mov: 0.5, intr: 0 },
-  { day: '02', lpr: 1.5, mov: 0.6, intr: 0 },
-  { day: '03', lpr: 1.8, mov: 0.55, intr: 0.05 },
-  { day: '04', lpr: 1.1, mov: 0.4, intr: 0 },
-  { day: '05', lpr: 2.1, mov: 0.8, intr: 0.1 },
-  { day: '06', lpr: 1.9, mov: 0.7, intr: 0 },
-  { day: 'Hoje', lpr: 0.8, mov: 0.3, intr: 0 },
-]
-
 export default function Billing() {
   const { profile } = useProfile()
   const [totalCost, setTotalCost] = useState(0)
   const [cameraTotals, setCameraTotals] = useState<Record<string, number>>({})
   const [analyticTotals, setAnalyticTotals] = useState<Record<string, number>>({})
+  const [chartData, setChartData] = useState<any[]>([])
+  const [chartConfig, setChartConfig] = useState<ChartConfig>({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!profile) return
+    if (!profile?.organization_id) return
+
     const fetchUsage = async () => {
-      const { data } = await supabase
+      setLoading(true)
+      const { data, error } = await supabase
         .from('usage_logs')
-        .select('amount, cameras(name), analytics_catalog(name)')
+        .select('amount, timestamp, cameras(name), analytics_catalog(name, slug)')
+        .eq('organization_id', profile.organization_id)
+        .order('timestamp', { ascending: true })
+
+      if (error) {
+        console.error('Error fetching usage:', error)
+        setLoading(false)
+        return
+      }
 
       const usage = data || []
+      let costSum = 0
+      const cTotals: Record<string, number> = {}
+      const aTotals: Record<string, number> = {}
+      const dailyData: Record<string, any> = {}
+      const uniqueAnalytics = new Map<string, string>()
 
-      const t = usage.reduce((sum, item) => sum + Number(item.amount), 0)
+      usage.forEach((log) => {
+        const amt = Number(log.amount)
+        costSum += amt
 
-      const cTotals = usage.reduce((acc: any, curr) => {
-        const name = curr.cameras?.name || 'Desconhecida'
-        acc[name] = (acc[name] || 0) + Number(curr.amount)
-        return acc
-      }, {})
+        const camName = log.cameras?.name || 'Desconhecida'
+        cTotals[camName] = (cTotals[camName] || 0) + amt
 
-      const aTotals = usage.reduce((acc: any, curr) => {
-        const name = curr.analytics_catalog?.name || 'Desconhecido'
-        acc[name] = (acc[name] || 0) + Number(curr.amount)
-        return acc
-      }, {})
+        const anaName = log.analytics_catalog?.name || 'Desconhecido'
+        aTotals[anaName] = (aTotals[anaName] || 0) + amt
 
-      setTotalCost(t)
+        const date = new Date(log.timestamp)
+        const day = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+        const slug = log.analytics_catalog?.slug || 'outros'
+
+        if (!dailyData[day]) dailyData[day] = { day }
+        dailyData[day][slug] = (dailyData[day][slug] || 0) + amt
+        uniqueAnalytics.set(slug, anaName)
+      })
+
+      const newChartData = Object.values(dailyData).sort((a, b) => a.day.localeCompare(b.day))
+      const newChartConfig: ChartConfig = {}
+      let colorIndex = 1
+
+      uniqueAnalytics.forEach((name, slug) => {
+        newChartConfig[slug] = { label: name, color: `hsl(var(--chart-${colorIndex}))` }
+        colorIndex = colorIndex > 5 ? 1 : colorIndex + 1
+      })
+
+      setTotalCost(costSum)
       setCameraTotals(cTotals)
       setAnalyticTotals(aTotals)
+      setChartData(newChartData)
+      setChartConfig(newChartConfig)
       setLoading(false)
     }
+
     fetchUsage()
-  }, [profile])
+  }, [profile?.organization_id])
 
   return (
     <div className="max-w-6xl mx-auto flex flex-col gap-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Faturamento e Consumo</h1>
         <p className="text-muted-foreground">
-          Gerencie o uso de analíticos, estimativa de fatura e limites de gastos.
+          Gerencie o uso de analíticos, estimativa de fatura e limites de gastos da sua conta.
         </p>
       </div>
 
@@ -100,36 +123,46 @@ export default function Billing() {
 
         <Card className="md:col-span-2 border-border/50 bg-card/50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Evolução do Consumo (Demonstração)</CardTitle>
+            <CardTitle className="text-lg">Evolução do Consumo</CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartContainer
-              config={{
-                lpr: { label: 'LPR (Placas)', color: 'hsl(var(--chart-1))' },
-                mov: { label: 'Movimento', color: 'hsl(var(--chart-2))' },
-                intr: { label: 'Intrusão', color: 'hsl(var(--chart-5))' },
-              }}
-              className="h-[140px] w-full"
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                  <XAxis dataKey="day" fontSize={10} tickLine={false} axisLine={false} />
-                  <YAxis
-                    fontSize={10}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(val) => `R$${val}`}
-                  />
-                  <Tooltip
-                    content={<ChartTooltipContent />}
-                    cursor={{ fill: 'hsl(var(--muted))' }}
-                  />
-                  <Bar dataKey="lpr" fill="var(--color-lpr)" stackId="a" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="mov" fill="var(--color-mov)" stackId="a" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="intr" fill="var(--color-intr)" stackId="a" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
+            {loading ? (
+              <div className="h-[140px] w-full flex items-center justify-center text-sm text-muted-foreground">
+                Carregando dados...
+              </div>
+            ) : chartData.length === 0 ? (
+              <div className="h-[140px] w-full flex flex-col items-center justify-center text-sm text-muted-foreground gap-2">
+                <Info className="h-5 w-5 opacity-50" />
+                Nenhum dado de consumo registrado no período.
+              </div>
+            ) : (
+              <ChartContainer config={chartConfig} className="h-[140px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                    <XAxis dataKey="day" fontSize={10} tickLine={false} axisLine={false} />
+                    <YAxis
+                      fontSize={10}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(val) => `R$${val}`}
+                    />
+                    <Tooltip
+                      content={<ChartTooltipContent />}
+                      cursor={{ fill: 'hsl(var(--muted))' }}
+                    />
+                    {Object.keys(chartConfig).map((slug) => (
+                      <Bar
+                        key={slug}
+                        dataKey={slug}
+                        fill={`var(--color-${slug})`}
+                        stackId="a"
+                        radius={[2, 2, 0, 0]}
+                      />
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -148,9 +181,15 @@ export default function Billing() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {Object.entries(cameraTotals).length === 0 ? (
+                {loading ? (
                   <TableRow>
-                    <TableCell colSpan={2} className="text-center text-muted-foreground">
+                    <TableCell colSpan={2} className="text-center text-muted-foreground py-6">
+                      Carregando...
+                    </TableCell>
+                  </TableRow>
+                ) : Object.entries(cameraTotals).length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-center text-muted-foreground py-6">
                       Sem consumo
                     </TableCell>
                   </TableRow>
@@ -182,9 +221,15 @@ export default function Billing() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {Object.entries(analyticTotals).length === 0 ? (
+                {loading ? (
                   <TableRow>
-                    <TableCell colSpan={2} className="text-center text-muted-foreground">
+                    <TableCell colSpan={2} className="text-center text-muted-foreground py-6">
+                      Carregando...
+                    </TableCell>
+                  </TableRow>
+                ) : Object.entries(analyticTotals).length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-center text-muted-foreground py-6">
                       Sem consumo
                     </TableCell>
                   </TableRow>
