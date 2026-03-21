@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Aperture, CheckCircle2 } from 'lucide-react'
+import { Aperture, MailCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase/client'
@@ -27,10 +27,16 @@ export default function Register() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [termsAccepted, setTermsAccepted] = useState(false)
 
+  const isPasswordMismatch = form.password && form.confirm && form.password !== form.confirm
+
   const handleInputChange = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }))
     if (formErrors[field]) {
-      setFormErrors((prev) => ({ ...prev, [field]: '' }))
+      setFormErrors((prev) => {
+        const newErrors = { ...prev }
+        delete newErrors[field]
+        return newErrors
+      })
     }
   }
 
@@ -110,6 +116,7 @@ export default function Register() {
         name: form.company,
         cnpj: form.cnpj,
         status: 'trial',
+        billing_email: form.email,
       })
 
       if (orgError) {
@@ -129,47 +136,23 @@ export default function Register() {
 
       if (profileError) throw profileError
 
-      // Seed initial data for demo purposes
       const newCamId = crypto.randomUUID()
-      const { error: camError } = await supabase.from('cameras').insert({
+      await supabase.from('cameras').insert({
         id: newCamId,
         organization_id: newOrgId,
         name: 'Câmera Principal (Exemplo)',
         status: 'online',
         connection_url: 'rtsp://demo',
+        is_active: true,
       })
-
-      if (!camError) {
-        const { data: catalog } = await supabase.from('analytics_catalog').select('*').limit(2)
-        if (catalog && catalog.length > 0) {
-          await supabase
-            .from('camera_analytics_config')
-            .insert([{ camera_id: newCamId, analytic_id: catalog[0].id }])
-          await supabase.from('usage_logs').insert([
-            {
-              organization_id: newOrgId,
-              camera_id: newCamId,
-              analytic_id: catalog[0].id,
-              amount: 5.5,
-            },
-          ])
-          await supabase.from('events').insert([
-            {
-              camera_id: newCamId,
-              analytic_id: catalog[0].id,
-              thumbnail_url: 'https://img.usecurling.com/p/300/200?q=car',
-            },
-          ])
-        }
-      }
 
       toast.success('Conta criada com sucesso!', {
-        description: 'Período de teste gratuito ativado.',
-        icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" />,
+        description: 'Por favor, verifique sua caixa de entrada e confirme o e-mail para acessar.',
+        icon: <MailCheck className="h-5 w-5 text-emerald-500" />,
+        duration: 8000,
       })
-      navigate('/dashboard')
+      navigate('/login')
     } catch (error: any) {
-      // Abort session if database setup fails to prevent zombie accounts logged in
       if (createdUserId) {
         await signOut()
       }
@@ -276,11 +259,18 @@ export default function Register() {
                   <p className="text-xs font-medium text-destructive">{formErrors.email}</p>
                 )}
               </div>
+
+              {isPasswordMismatch && (
+                <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md border border-destructive/20 mt-4 mb-2 font-medium">
+                  As senhas informadas não coincidem. Verifique e tente novamente.
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label
                     htmlFor="password"
-                    className={formErrors.password ? 'text-destructive' : ''}
+                    className={formErrors.password || isPasswordMismatch ? 'text-destructive' : ''}
                   >
                     Senha
                   </Label>
@@ -288,7 +278,9 @@ export default function Register() {
                     id="password"
                     type="password"
                     className={
-                      formErrors.password ? 'border-destructive focus-visible:ring-destructive' : ''
+                      formErrors.password || isPasswordMismatch
+                        ? 'border-destructive focus-visible:ring-destructive'
+                        : ''
                     }
                     value={form.password}
                     onChange={(e) => handleInputChange('password', e.target.value)}
@@ -298,14 +290,19 @@ export default function Register() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirm" className={formErrors.confirm ? 'text-destructive' : ''}>
+                  <Label
+                    htmlFor="confirm"
+                    className={formErrors.confirm || isPasswordMismatch ? 'text-destructive' : ''}
+                  >
                     Confirmar Senha
                   </Label>
                   <Input
                     id="confirm"
                     type="password"
                     className={
-                      formErrors.confirm ? 'border-destructive focus-visible:ring-destructive' : ''
+                      formErrors.confirm || isPasswordMismatch
+                        ? 'border-destructive focus-visible:ring-destructive'
+                        : ''
                     }
                     value={form.confirm}
                     onChange={(e) => handleInputChange('confirm', e.target.value)}

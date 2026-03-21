@@ -11,7 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 export default function Admin() {
   const { profile, loading: profileLoading } = useProfile()
-  const { user, loading: authLoading } = useAuth()
+  const { loading: authLoading } = useAuth()
 
   const loading = profileLoading || authLoading
 
@@ -24,12 +24,8 @@ export default function Admin() {
     )
   }
 
-  // Verifica se o email logado possui o domínio sintético dos usuários restritos (operadores)
-  const isOperatorAccount = user?.email?.endsWith('@operator.viona.local')
-
-  // Gestores são garantidos se o login foi efetuado com email real, independente do "role" inicial estar incorreto,
-  // ou se o usuário for explicitamente super admin.
-  const isGestor = profile && (!isOperatorAccount || profile.is_super_admin)
+  // Permite acesso se o usuário for explicitamente "admin" ou "super_admin" no perfil
+  const isGestor = profile && (profile.role === 'admin' || profile.is_super_admin)
 
   if (!isGestor) {
     return (

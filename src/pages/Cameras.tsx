@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
 import { supabase } from '@/lib/supabase/client'
 import { useProfile } from '@/hooks/use-profile'
 import { toast } from 'sonner'
@@ -66,6 +67,20 @@ export default function Cameras() {
     }
   }
 
+  const handleToggleActive = async (id: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('cameras')
+        .update({ is_active: currentStatus })
+        .eq('id', id)
+      if (error) throw error
+      toast.success(currentStatus ? 'Câmera ativada com sucesso.' : 'Câmera inativada com sucesso.')
+      setCameras(cameras.map((c) => (c.id === id ? { ...c, is_active: currentStatus } : c)))
+    } catch (err: any) {
+      toast.error('Erro ao atualizar status da câmera')
+    }
+  }
+
   const isLoading = loading || profileLoading
   const filteredCameras = cameras.filter(
     (c) =>
@@ -106,7 +121,8 @@ export default function Cameras() {
             <TableRow>
               <TableHead className="w-[80px]">Snapshot</TableHead>
               <TableHead>Nome & Detalhes</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Status Rede</TableHead>
+              <TableHead>Ativação</TableHead>
               <TableHead>Analíticos Ativos</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -114,7 +130,7 @@ export default function Cameras() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
                   <div className="flex items-center justify-center gap-2">
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                     Carregando câmeras...
@@ -123,7 +139,7 @@ export default function Cameras() {
               </TableRow>
             ) : filteredCameras.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
                   <div className="flex flex-col items-center gap-2">
                     <Info className="h-5 w-5 opacity-50" />
                     Nenhuma câmera encontrada.
@@ -134,8 +150,18 @@ export default function Cameras() {
               filteredCameras.map((camera) => (
                 <TableRow key={camera.id} className="hover:bg-muted/30">
                   <TableCell>
-                    <div className="h-10 w-16 rounded overflow-hidden bg-muted flex items-center justify-center relative border border-border/50">
-                      <CamIcon className="h-4 w-4 text-muted-foreground" />
+                    <div
+                      className={`h-10 w-16 rounded overflow-hidden bg-muted flex items-center justify-center relative border ${camera.is_active !== false ? 'border-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.2)]' : 'border-border/50'}`}
+                    >
+                      {camera.is_active !== false ? (
+                        <img
+                          src={`https://img.usecurling.com/p/100/60?q=cctv&seed=${camera.id}`}
+                          className="w-full h-full object-cover"
+                          alt="snapshot"
+                        />
+                      ) : (
+                        <CamIcon className="h-4 w-4 text-muted-foreground" />
+                      )}
                       {camera.status !== 'online' && (
                         <div className="absolute inset-0 bg-black/50" />
                       )}
@@ -161,6 +187,20 @@ export default function Cameras() {
                         <span>Offline</span>
                       )}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={camera.is_active !== false}
+                        onCheckedChange={(checked) => handleToggleActive(camera.id, checked)}
+                      />
+                      <Badge
+                        variant={camera.is_active !== false ? 'default' : 'secondary'}
+                        className={`font-normal text-[10px] ${camera.is_active !== false ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-transparent' : ''}`}
+                      >
+                        {camera.is_active !== false ? 'Ativa' : 'Inativa'}
+                      </Badge>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant="secondary" className="text-xs">
