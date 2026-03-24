@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Activity, Camera, Zap, DollarSign, Settings2, Camera as CamIcon, Info } from 'lucide-react'
+import {
+  Activity,
+  Camera,
+  Zap,
+  DollarSign,
+  Settings2,
+  Camera as CamIcon,
+  Info,
+  Ban,
+} from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -11,7 +20,13 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const { profile, loading: profileLoading } = useProfile()
 
-  const [stats, setStats] = useState({ cameras: 0, analytics: 0, events: 0, cost: 0 })
+  const [stats, setStats] = useState({
+    cameras: 0,
+    analytics: 0,
+    events: 0,
+    cost: 0,
+    falsePositives: 0,
+  })
   const [cameras, setCameras] = useState<any[]>([])
   const [loadingData, setLoadingData] = useState(true)
 
@@ -25,11 +40,16 @@ export default function Dashboard() {
 
     const fetchStats = async () => {
       setLoadingData(true)
-      const [{ data: cams }, { count: evCount }, { data: usage }] = await Promise.all([
-        supabase.from('cameras').select('*, camera_analytics_config(id)'),
-        supabase.from('events').select('*', { count: 'exact', head: true }),
-        supabase.from('usage_logs').select('amount'),
-      ])
+      const [{ data: cams }, { count: evCount }, { data: usage }, { count: fpCount }] =
+        await Promise.all([
+          supabase.from('cameras').select('*, camera_analytics_config(id)'),
+          supabase.from('events').select('*', { count: 'exact', head: true }),
+          supabase.from('usage_logs').select('amount'),
+          supabase
+            .from('events')
+            .select('*', { count: 'exact', head: true })
+            .eq('is_false_positive', true),
+        ])
 
       const activeCams = cams || []
       const totalAnalytics = activeCams.reduce(
@@ -44,6 +64,7 @@ export default function Dashboard() {
         analytics: totalAnalytics,
         events: evCount || 0,
         cost: totalCost,
+        falsePositives: fpCount || 0,
       })
       setLoadingData(false)
     }
@@ -54,14 +75,14 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col gap-6 h-[calc(100vh-8rem)]">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 shrink-0">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 shrink-0">
         <Card className="border-border/50 bg-gradient-to-br from-card to-muted/20">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="p-3 bg-primary/10 rounded-lg text-primary">
               <Camera className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Câmeras Cadastradas</p>
+              <p className="text-sm text-muted-foreground">Câmeras</p>
               <p className="text-2xl font-bold">{isLoading ? '-' : stats.cameras}</p>
             </div>
           </CardContent>
@@ -90,11 +111,24 @@ export default function Dashboard() {
         </Card>
         <Card className="border-border/50 bg-gradient-to-br from-card to-muted/20">
           <CardContent className="p-4 flex items-center gap-4">
+            <div className="p-3 bg-destructive/10 rounded-lg text-destructive">
+              <Ban className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Falsos Positivos</p>
+              <p className="text-2xl font-bold text-destructive">
+                {isLoading ? '-' : stats.falsePositives}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-border/50 bg-gradient-to-br from-card to-muted/20">
+          <CardContent className="p-4 flex items-center gap-4">
             <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-500">
               <DollarSign className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Consumo Atual (R$)</p>
+              <p className="text-sm text-muted-foreground">Consumo (R$)</p>
               <p className="text-2xl font-bold text-emerald-500">
                 {isLoading ? '-' : `R$ ${stats.cost.toFixed(2).replace('.', ',')}`}
               </p>
