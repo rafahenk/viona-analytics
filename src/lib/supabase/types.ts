@@ -214,6 +214,7 @@ export type Database = {
           camera_id: string
           created_at: string
           id: string
+          is_false_positive: boolean
           metadata: Json | null
           thumbnail_url: string | null
         }
@@ -222,6 +223,7 @@ export type Database = {
           camera_id: string
           created_at?: string
           id?: string
+          is_false_positive?: boolean
           metadata?: Json | null
           thumbnail_url?: string | null
         }
@@ -230,6 +232,7 @@ export type Database = {
           camera_id?: string
           created_at?: string
           id?: string
+          is_false_positive?: boolean
           metadata?: Json | null
           thumbnail_url?: string | null
         }
@@ -602,6 +605,7 @@ export const Constants = {
 //   metadata: jsonb (nullable, default: '{}'::jsonb)
 //   thumbnail_url: text (nullable)
 //   created_at: timestamp with time zone (not null, default: now())
+//   is_false_positive: boolean (not null, default: false)
 // Table: organizations
 //   id: uuid (not null, default: gen_random_uuid())
 //   name: text (not null)

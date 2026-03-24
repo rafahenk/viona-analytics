@@ -40,33 +40,35 @@ export default function Dashboard() {
 
     const fetchStats = async () => {
       setLoadingData(true)
-      const [{ data: cams }, { count: evCount }, { data: usage }, { count: fpCount }] =
-        await Promise.all([
-          supabase.from('cameras').select('*, camera_analytics_config(id)'),
-          supabase.from('events').select('*', { count: 'exact', head: true }),
-          supabase.from('usage_logs').select('amount'),
-          supabase
-            .from('events')
-            .select('*', { count: 'exact', head: true })
-            .eq('is_false_positive', true),
-        ])
+      try {
+        const [{ data: cams }, { count: evCount }, { data: usage }, { count: fpCount }] =
+          await Promise.all([
+            supabase.from('cameras').select('*, camera_analytics_config(id)'),
+            supabase.from('events').select('id', { count: 'exact' }),
+            supabase.from('usage_logs').select('amount'),
+            supabase.from('events').select('id', { count: 'exact' }).eq('is_false_positive', true),
+          ])
 
-      const activeCams = cams || []
-      const totalAnalytics = activeCams.reduce(
-        (acc, c) => acc + (c.camera_analytics_config?.length || 0),
-        0,
-      )
-      const totalCost = (usage || []).reduce((acc, u) => acc + Number(u.amount), 0)
+        const activeCams = cams || []
+        const totalAnalytics = activeCams.reduce(
+          (acc, c) => acc + (c.camera_analytics_config?.length || 0),
+          0,
+        )
+        const totalCost = (usage || []).reduce((acc, u) => acc + Number(u.amount), 0)
 
-      setCameras(activeCams)
-      setStats({
-        cameras: activeCams.length,
-        analytics: totalAnalytics,
-        events: evCount || 0,
-        cost: totalCost,
-        falsePositives: fpCount || 0,
-      })
-      setLoadingData(false)
+        setCameras(activeCams)
+        setStats({
+          cameras: activeCams.length,
+          analytics: totalAnalytics,
+          events: evCount || 0,
+          cost: totalCost,
+          falsePositives: fpCount || 0,
+        })
+      } catch (error) {
+        console.error('Error fetching dashboard stats:', error)
+      } finally {
+        setLoadingData(false)
+      }
     }
     fetchStats()
   }, [profile, profileLoading])
